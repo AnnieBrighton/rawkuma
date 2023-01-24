@@ -175,18 +175,20 @@ class getGooglBooks(getHTTP):
         t = None
         a = []
         for val in kuma_title:
-            if val != '':
-                json = self.getJSON('https://www.googleapis.com/books/v1/volumes?q=' + quote(val))
-                if 'items' in json:
-                    for item in json['items']:
-                        if item['volumeInfo']['language'] == 'ja':
-                            authors = item['volumeInfo']['authors'] if 'authors' in item['volumeInfo'] else []
-                            title = item['volumeInfo']['title']
-                            r = SequenceMatcher(None, val.strip(), title.strip()).ratio()
-                            if r > max and r > 0.7:
-                                t = val
-                                a = authors
-                                max = r
+            if val == '':
+                continue
+
+            json = self.getJSON('https://www.googleapis.com/books/v1/volumes?q=' + quote(val))
+            if 'items' in json:
+                for item in json['items']:
+                    if item['volumeInfo']['language'] == 'ja':
+                        authors = item['volumeInfo']['authors'] if 'authors' in item['volumeInfo'] else []
+                        title = item['volumeInfo']['title']
+                        r = SequenceMatcher(None, val.strip(), title.strip()).ratio()
+                        if r > max and r > 0.7:
+                            t = val
+                            a = authors
+                            max = r
 
         return t, a
 
@@ -262,8 +264,11 @@ class getKuma2DB:
         # logging.info(kuma_thumb)
 
         if kuma_update == val[DB.KUMA_UPDATED]:
-            logging.info(book_key + 'は更新が無い')
+            # 取得更新日付とDB上の更新日付が同じ
+            logging.info('{BOOK}は更新が無い'.format(BOOK=book_key))
             return
+
+        logging.info('{BOOK}更新'.format(BOOK=book_key))
 
         books = getGooglBooks()
         title, author = books.getTitle(kuma_title)
@@ -293,7 +298,7 @@ class getKuma2DB:
                     continue
 
             if self.db.check_chapter(book_id, chapter):
-                logging.info('すでに存在:{URL}'.format(URL=url[0]))
+                # logging.info('すでに存在:{URL}'.format(URL=url[0]))
                 continue
 
             # チャプターレコード作成
@@ -329,94 +334,6 @@ class getKuma2DB:
         self.db.update_book(book_id, **{DB.USE_FLAG: DB.USE_FLAG_ON if type.upper() == 'ON' else DB.USE_FLAG_OFF})
 
         self.db.commit()
-
-    # ダウンロード
-    def updatedb3(self, book_id, url):
-        """ 
-        """
-        # 「https://rawkuma.com/manga/bakemonogatari/」の形式ならばそのままリストを取得、各リストに対しダウンロードを実行
-        # 「https://rawkuma.com/bakemonogatari-chapter-1/」の形式のリストを取得
-        html = getHTML(url)
-        urls = html.getURLlist()
-        if urls is None:
-            logging.error('URL取得エラー:%s' % url)
-            return
-
-        book_key = re.search(r'^https?://[^/]+/[^/]+/([^/]+)/?$', url)[1]
-
-        kuma_tags = html.getTAGlist()
-        kuma_artists = html.getARTIST()
-        kuma_title = html.getTitle()
-        kuma_post = html.getPostedOn()
-        kuma_update = html.getUpdatedOn()
-        kuma_thumb = html.getThumbnail()
-
-        # logging.info(url)
-        # logging.info(book_key)
-        # logging.info(urls)
-        # logging.info(kuma_tags)
-        # logging.info(kuma_artists)
-        # logging.info(kuma_title)
-        # logging.info(kuma_post)
-        # logging.info(kuma_update)
-        # logging.info(kuma_thumb)
-
-        book_id = self.db.getBookID(book_key)
-        
-        if (book_id is None):
-            books = getGooglBooks()
-            title, author = books.getTitle(kuma_title)
-
-            data = {
-                DB.BOOK_KEY: book_key,
-                DB.USE_FLAG: DB.USE_FLAG_ON,
-                DB.URL: url,
-                DB.TITLE: title,
-                DB.AUTHOR: ','.join(author),
-                DB.THUMB: kuma_thumb,
-                DB.KUMA_TITLE: kuma_title[0],
-                DB.KUMA_AUTHOR: ','.join(kuma_artists),
-                DB.KUMA_TAG: ','.join(kuma_tags),
-                DB.KUMA_POSTED: kuma_post,
-                DB.KUMA_UPDATED: kuma_update
-            }
-            book_id = self.db.insert_book(**data)
-
-        for url in urls:
-            # ファイルを展開するパスを作成 (最後に / を含む)
-            list = re.search(r'^https?://[^/]+/[^/]+-chapter-([0-9]+)-([0-9]+)/$', url)
-            if list:
-                chapter = '%04d.%02d' % (int(list.group(1)), int(list.group(2)))
-            else:
-                list = re.search(r'^https?://[^/]+/[^/]+-chapter-([0-9]+)/$', url)
-                if list:
-                    chapter = '%04d.00' % int(list.group(1))
-                else:
-                    continue
-
-            if self.db.check_chapter(book_id, chapter):
-                logging.info('すでに存在:{URL}'.format(URL=url))
-                continue
-
-            # チャプターレコード作成
-            chapter_id = self.db.insert_chapter(book_id, url, chapter)
-
-            # ページ情報取得
-            html = getHTML(url)
-            imgurls = html.getImageList()
-
-            # ページ登録情報作成
-            pagelists = []
-            for page, page_url in enumerate(imgurls):
-                pagelists.append((chapter_id, page_url, page + 1))
-
-            # ページレコード作成
-            self.db.insert_page(pagelists)
-
-        self.db.commit()
-
-        return
-
 
 #
 # メイン
