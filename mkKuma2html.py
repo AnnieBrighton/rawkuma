@@ -15,7 +15,7 @@ HEADER='''<html xmlns="https://www.w3.org/1999/xhtml" lang="en-US">
     <meta charset="utf-8">
     <meta name="referrer" content="no-referrer">
     <style>
-        .Header {
+        .HeaderPage {
             position: sticky;
             /* ヘッダーを固定する */
             top: 0;
@@ -33,6 +33,76 @@ HEADER='''<html xmlns="https://www.w3.org/1999/xhtml" lang="en-US">
             color: #000000;
             /* フォントの色を指定する */
         }
+
+        .HeaderBook {
+            position: sticky;
+            /* ヘッダーを固定する */
+            top: 0;
+            /* 上部から配置の基準位置を決める */
+            left: 0;
+            /* 左から配置の基準位置を決める */
+            width: 100%;
+            /* ヘッダーの横幅を指定する */
+            height: auto;
+            /* ヘッダーの高さを指定する */
+            padding: 10px;
+            /* ヘッダーの余白を指定する(上下左右) */
+            background-color: #31a9ee;
+            /* ヘッダーの背景色を指定する */
+            color: #000000;
+            /* フォントの色を指定する */
+        }
+
+        /*左と右を囲う全体のエリア*/
+        .wrapper{
+            position: relative;/*position stickyの基点にするため relativeをかける*/
+            display: flex;/*左エリア、右エリア横並び指定*/
+            flex-wrap: wrap;/*ボックスの折り返し可*/
+        }
+
+        .ChapterHeader {
+            /*左固定記述*/
+            position: -webkit-sticky;/*Safari用*/
+            position: sticky;
+            /* ヘッダーを固定する */
+            top: 0;
+            /* 上部から配置の基準位置を決める */
+            left: 0;
+            /* 左から配置の基準位置を決める */
+            width: 47%;
+            /* ヘッダーの横幅を指定する */
+            height: 100%;
+            /* ヘッダーの高さを指定する */
+            padding: 10px;
+            /* ヘッダーの余白を指定する(上下左右) */
+            background-color: #31a9ee;
+            /* ヘッダーの背景色を指定する */
+            color: #000000;
+            /* フォントの色を指定する */
+            float:left;
+        }
+
+        .ChapterList {
+            position: -webkit-sticky;/*Safari用*/
+            position: sticky;
+            /* ヘッダーを固定する */
+            top: 0;
+            /* 上部から配置の基準位置を決める */
+            left: 0;
+            /* 左から配置の基準位置を決める */
+            width: 47%;
+            /* ヘッダーの横幅を指定する */
+            height: 100%;
+            /* ヘッダーの高さを指定する */
+            padding: 10px;
+            /* ヘッダーの余白を指定する(上下左右) */
+            background-color: #31a9ee;
+            /* ヘッダーの背景色を指定する */
+            color: #000000;
+            /* フォントの色を指定する */
+            float:right;
+        }
+
 
         .Footer {
             width: 100%;
@@ -84,11 +154,12 @@ HEADER='''<html xmlns="https://www.w3.org/1999/xhtml" lang="en-US">
             overflow: hidden;
             padding: 5px 10px;
             border: 1px solid #333;
-            font-size: 14px;
+            font-size: 24px;
             margin: 0 5px;
             margin-bottom: 10px;
             position: relative;
             border-radius: 5px;
+            font-family:  "ヒラギノ角ゴ ProN W3", HiraKakuProN-W3, 游ゴシック, "Yu Gothic", メイリオ, Meiryo, Verdana, Helvetica, Arial, sans-serif;
         }
 
         .clstyle {
@@ -96,7 +167,7 @@ HEADER='''<html xmlns="https://www.w3.org/1999/xhtml" lang="en-US">
         }
 
         .eph-num {
-            width: 85%;
+            width: 100%;
         }
         span.chapternum {
             font-weight: 400;
@@ -105,7 +176,7 @@ HEADER='''<html xmlns="https://www.w3.org/1999/xhtml" lang="en-US">
         }
 
         span.chapterdate {
-           font-size: 12px;
+           font-size: 18px;
             color: #888;
         }
 
@@ -127,15 +198,19 @@ class MkKuma2Html:
         self.db = DB(logging)        
 
     def tohtml(self) -> None:
+        """ HTML出力
+        """
         lists = self.db.select_book(**{DB.BOOK_TYPE: None})
         types = set([ val[DB.BOOK_TYPE] for val in lists ])
 
+        # タイプリストHTML出力
         self.output_book(types)
 
         for type in types:
             books = self.db.select_book(**{DB.BOOK_KEY: None, DB.TITLE: None, DB.BOOK_TYPE: type, DB.THUMB: None})
 
-            self.output_book_type(books, type)
+            # ブック一覧HTML出力
+            self.output_book_type(books, types, type)
 
             for book in books:
                 chapters = self.db.select_chapter(book[DB.BOOK_ID])
@@ -143,40 +218,55 @@ class MkKuma2Html:
                 path = os.path.join('img{TYPE}'.format(TYPE=book[DB.BOOK_TYPE]), book[DB.BOOK_KEY])
                 # print(os.path.join(path, book[DB.BOOK_KEY] + '.html'))
 
-                # ディレクトリ作成
+                # チャプター格納ディレクトリ作成
                 os.makedirs(path, exist_ok=True)
 
+                # チャプター一覧HTML出力
                 self.output_chapter_top(book, path, chapters)
 
+                # チャプターHTML出力
                 self.output_chapter(book, path, chapters)
 
     def output_book(self, types):
-        with open('Books.html', mode='w') as i:
+        """ トップの Books.html を作成
+
+        Args:
+            types ( list ): タイプのリスト
+        """
+        with open('Books.html', mode='w') as f:
             # HTMLヘッダ出力
-            i.write(HEADER)
+            f.write(HEADER)
 
             # HTMLボディ出力
-            i.write('<body>\n')
-            i.write('<div><ul class="clstyle">')
+            f.write('<body>\n')
+            f.write('<div class="chbox">')
+            f.write('<ul class="clstyle">')
 
             for type in types:
-                i.write('''
+                f.write('''
 <li>
     <div class=chbox>
         <div class="eph-num">
             <a href="Books{TYPE}.html">
-                <span>Type{TYPE}</span>
+                <span> Type{TYPE} </span>
             </a>
         </div>
     </div>
 </li>
 '''.format(TYPE=type))
 
-            i.write('</div>\n')
-            i.write('</body>\n')
-            i.write('</html>\n')
+            f.write('</div>\n')
+            f.write('</body>\n')
+            f.write('</html>\n')
 
-    def output_book_type(self, books, type):
+    def output_book_type(self, books, types, type):
+        """ タイプのブック一覧表示
+
+        Args:
+            books (_type_): ブックリスト
+            types (_type_): タイプリスト
+            type (_type_): タイプ
+        """
         with open('Books{TYPE}.html'.format(TYPE=type), mode='w') as f:
             # HTMLヘッダ出力
             f.write(HEADER)
@@ -184,27 +274,55 @@ class MkKuma2Html:
             # HTMLボディ出力
             f.write('<body>\n')
 
+            # 画面上のヘッダ出力
+            f.write('<div class="HeaderBook">\n')
+            f.write('<div class="chbox">\n')
+            f.write('<tr>\n')
+
+            for t in types:
+                f.write('''<th><a href="Books{TYPE}.html">Type{TYPE}</a></th>'''.format(TYPE=t))
+
+            f.write('</tr>\n')
+            f.write('</div>\n')
+            f.write('</div>\n')
+
+            f.write('<div>')
+
             for book in books:
                 path = os.path.join('img{TYPE}'.format(TYPE=book[DB.BOOK_TYPE]), book[DB.BOOK_KEY])
                 f.write('''
 <a href="{CHAPTER_URL}.html">
-    <img src="{THUMB}" width="211" height="auto">
+    <img src="{THUMB}" width="200" height="auto">
 </a>
 '''.format(CHAPTER_URL=os.path.join(path, book[DB.BOOK_KEY]), THUMB=book[DB.THUMB]))
 
+            f.write('</div>')
             f.write('</body>\n')
             f.write('</html>\n')
 
 
     def output_chapter_top(self, book, path, chapters):
+        """_summary_
+
+        Args:
+            book (_type_): _description_
+            path (_type_): _description_
+            chapters (_type_): _description_
+        """
         with open(os.path.join(path, book[DB.BOOK_KEY] + '.html'), mode='w') as f:
             # HTMLヘッダ出力
             f.write(HEADER)
 
             # HTMLボディ出力
             f.write('<body>\n')
-            f.write('<div><ul class="clstyle">')
-            for chap in chapters:
+            f.write('<div class="wrapper">')
+            f.write('<div class="ChapterHeader">')
+            f.write('<img src="{THUMB}" width="80%"><br><span class="chbox"> {TITLE} </span>\n'.format(THUMB=book[DB.THUMB], TITLE=book[DB.TITLE]))
+            f.write('</div>')
+
+            f.write('<div class="ChapterList">')
+            f.write('<ul class="clstyle">')
+            for chap in sorted(chapters, key=lambda x: x[DB.CHAPTER_KEY], reverse=True):
                 # print(chapters)
                 # print(chap)
                 f.write('''
@@ -226,10 +344,18 @@ class MkKuma2Html:
                 ))
 
             f.write('</ul></div>')
+            f.write('</div>')
             f.write('</body>\n')
             f.write('</html>\n')
 
     def output_chapter(self, book, path, chapters):
+        """_summary_
+
+        Args:
+            book (_type_): _description_
+            path (_type_): _description_
+            chapters (_type_): チャプターリスト
+        """
         max = len(chapters)
         for index, chapter in enumerate(chapters):
             with open(os.path.join(path, book[DB.BOOK_KEY] + '_' + chapter[DB.CHAPTER_KEY] + '.html'), mode='w') as f:
@@ -240,7 +366,7 @@ class MkKuma2Html:
                 f.write('<body>\n')
 
                 # 画面上のヘッダ出力
-                f.write('<div class="Header">\n')
+                f.write('<div class="HeaderPage">\n')
 
                 # 前チャプター移動
                 chap = chapters[index - 1]
@@ -257,7 +383,9 @@ class MkKuma2Html:
                             CHAPTER=book[DB.BOOK_KEY] + '_' + chap[DB.CHAPTER_KEY], CUR=cur, MAX=max, SELECT=' selected' if chap[DB.CHAPTER_KEY] == chapter[DB.CHAPTER_KEY] else '' ))
                 f.write('</select>\n')
 
-                    # 次チャプター移動
+                f.write('<span> {TITLE} </span>\n'.format(TITLE=book[DB.TITLE]))
+
+                # 次チャプター移動
                 chap = chapters[index + 1] if index + 1 != max else chapters[0]
                 f.write('<a href="{CHAPTER_URL}.html">{CHAPTER}</a>\n'.format(
                                 CHAPTER_URL=book[DB.BOOK_KEY] + '_' + chap[DB.CHAPTER_KEY], CHAPTER=chap[DB.CHAPTER_KEY]
@@ -273,7 +401,7 @@ class MkKuma2Html:
 
                 f.write('</div>')
 
-                    # 画面上フッター 次チャプター移動
+                # 画面上フッター 次チャプター移動
                 chap = chapters[index + 1] if index + 1 != max else chapters[0]
                 f.write('<div class="Footer"><a href="{CHAPTER_URL}.html">{CHAPTER}</a></div>\n'.format(
                                 CHAPTER_URL=book[DB.BOOK_KEY] + '_' + chap[DB.CHAPTER_KEY], CHAPTER=chap[DB.CHAPTER_KEY]
