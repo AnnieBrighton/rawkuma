@@ -10,6 +10,7 @@
 # - Posted On
 # - Updated On
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 import logging
@@ -17,6 +18,8 @@ import re
 import sys
 from lxml import etree
 from requests import session, exceptions
+import aiohttp
+import functools
 from time import sleep
 import traceback
 
@@ -27,6 +30,15 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(threadName)s: %(me
 console = logging.StreamHandler()
 console.setFormatter(logging.Formatter('%(asctime)s %(threadName)s: %(message)s'))
 logging.getLogger('').addHandler(console)
+
+#
+def func_hook(func):
+    def wrapper(*arg, **kwargs):
+        logging.info('call %s' % (func.__name__))
+        ret = func(*arg, **kwargs)
+        logging.info('return %s' % (func.__name__))
+        return ret
+    return wrapper
 
 class getHTTP:
     # HTMLリストを取得
@@ -227,13 +239,6 @@ class getKuma2DB:
     def close(self) -> None:
         self.db.close()
 
-    def updatedb(self) -> None:
-        self.db.select_book()
-        vals = self.db.select_book(**{DB.URL: None, DB.BOOK_KEY: None, DB.KUMA_UPDATED: None, DB.TITLE: None, DB.USE_FLAG: DB.USE_FLAG_ON})
-
-        for val in vals:
-            self.updatedb2(val)
-
     # ダウンロード
     def updatedb2(self, val):
         """ 
@@ -252,16 +257,6 @@ class getKuma2DB:
         kuma_post = html.getPostedOn()
         kuma_update = html.getUpdatedOn()
         kuma_thumb = html.getThumbnail()
-
-        # logging.info(url)
-        # logging.info(book_key)
-        # logging.info(urls)
-        # logging.info(kuma_tags)
-        # logging.info(kuma_artists)
-        # logging.info(kuma_title)
-        # logging.info(kuma_post)
-        # logging.info(kuma_update)
-        # logging.info(kuma_thumb)
 
         if kuma_update == val[DB.KUMA_UPDATED]:
             # 取得更新日付とDB上の更新日付が同じ
@@ -325,8 +320,63 @@ class getKuma2DB:
 
         return
 
+    @func_hook
+    def updatedb(self) -> None:
+        """ DB更新
+        """
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
+            'Accept-Encoding': 'gzip',
+            'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8',
+        }
+
+        self.db.select_book()
+        vals = self.db.select_book(**{DB.URL: None, DB.BOOK_KEY: None, DB.KUMA_UPDATED: None, DB.TITLE: None, DB.USE_FLAG: DB.USE_FLAG_ON})
+
+        newvals = []
+
+        @func_hook
+        async def getHTML(val):
+            async with aiohttp.ClientSession(headers=headers) as session:
+                async with session.get(val[DB.URL]) as resp:
+                    if resp.status == 200:
+                        html = etree.HTML(await resp.text())
+                        update = datetime.strptime(html.xpath('//time[@itemprop="dateModified"]/@datetime')[0],'%Y-%m-%dT%H:%M:%S%z').astimezone(timezone(timedelta(hours=9)))
+
+                        logging.info(f'更新日時 {val[DB.BOOK_KEY]} {update} {val[DB.KUMA_UPDATED]}')
+
+                        if update != val[DB.KUMA_UPDATED]:
+                            newvals.append(val)
+                    else:
+                        logging.error(f'{val[DB.URL]} is {resp.status}')
+
+        @func_hook
+        async def limited_parallel_call(vals, limit):
+            sem = asyncio.Semaphore(limit)
+
+            async def call(val):
+                async with sem:
+                    return await getHTML(val)
+
+            return await asyncio.gather(*[call(val) for val in vals])
+
+        asyncio.run(limited_parallel_call(vals, 20))
+
+        for val in newvals:
+            logging.info(f'新規更新 {val[DB.BOOK_KEY]}')
+            self.updatedb2(val)
+
+
     # flag set
+    @func_hook
     def flagset(self, url, type):
+        """USEフラグ変更
+
+        Args:
+            url (_type_): BOOK URL
+            type (_type_): 変更後のUSEフラグ
+        """
         book_key = re.search(r'^https?://[^/]+/[^/]+/([^/]+)/?$', url)[1]
 
         book_id = self.db.getBookID(book_key)
@@ -339,7 +389,8 @@ class getKuma2DB:
 # メイン
 #
 
-if __name__ == '__main__':
+@func_hook
+def main():
     if len(sys.argv) == 3:
         url = sys.argv[1]
         type = sys.argv[2]
@@ -347,15 +398,21 @@ if __name__ == '__main__':
 
         kuma = getKuma2DB()
         if type.upper() == 'ON' or type.upper() == 'OFF':
+            # USEフラグ変更
             kuma.flagset(url, type)
         else:
+            # テーブル登録
             kuma.addbook(url, type)
         kuma.close()
 
     elif len(sys.argv) == 1:
+        # DB更新実行
         kuma = getKuma2DB()
         kuma.updatedb()
         kuma.close()
 
     else:
         logging.info('引数誤り')
+
+if __name__ == '__main__':
+    main()
