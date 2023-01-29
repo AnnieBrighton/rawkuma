@@ -11,6 +11,7 @@
 # - Updated On
 
 import asyncio
+import aiohttp
 from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 import logging
@@ -18,8 +19,6 @@ import re
 import sys
 from lxml import etree
 from requests import session, exceptions
-import aiohttp
-import functools
 from time import sleep
 import traceback
 
