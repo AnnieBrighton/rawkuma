@@ -201,7 +201,7 @@ class MkKuma2Html:
         """ HTML出力
         """
         lists = self.db.select_book(**{DB.BOOK_TYPE: None})
-        types = set([ val[DB.BOOK_TYPE] for val in lists ])
+        types = sorted(set([ val[DB.BOOK_TYPE] for val in lists ]))
 
         # タイプリストHTML出力
         self.output_book(types)
