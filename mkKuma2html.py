@@ -24,14 +24,16 @@ HEADER='''<html xmlns="https://www.w3.org/1999/xhtml" lang="en-US">
             /* 左から配置の基準位置を決める */
             width: 100%;
             /* ヘッダーの横幅を指定する */
-            height: 15px;
+            /* height: 15px; */
             /* ヘッダーの高さを指定する */
-            padding: 10px;
+            padding: 2px;
             /* ヘッダーの余白を指定する(上下左右) */
             background-color: #31a9ee;
             /* ヘッダーの背景色を指定する */
             color: #000000;
             /* フォントの色を指定する */
+            font-family:  "ヒラギノ角ゴ ProN W3", HiraKakuProN-W3, 游ゴシック, "Yu Gothic", メイリオ, Meiryo, Verdana, Helvetica, Arial, sans-serif;
+            display: flex;
         }
 
         .HeaderBook {
@@ -190,6 +192,19 @@ HEADER='''<html xmlns="https://www.w3.org/1999/xhtml" lang="en-US">
         a img {
             vertical-align: top;
         }
+
+        div.title {
+            width: 70%; /* 要素の横幅を指定 */
+            white-space: nowrap; /* 横幅のMAXに達しても改行しない */
+            overflow: hidden; /* ハミ出した部分を隠す */
+            text-overflow: ellipsis; /* 「…」と省略 */
+            -webkit-text-overflow: ellipsis; /* Safari */
+            -o-text-overflow: ellipsis; /* Opera */            
+        }
+        
+        select {
+            font-size: 14px;
+        }
     </style>
 </head>
 '''
@@ -224,7 +239,7 @@ class MkKuma2Html:
                 os.makedirs(path, exist_ok=True)
 
                 # チャプター一覧HTML出力
-                self.output_chapter_top(book, path, chapters)
+                self.output_chapter_top(type, book, path, chapters)
 
                 # チャプターHTML出力
                 self.output_chapter(book, path, chapters)
@@ -303,10 +318,11 @@ class MkKuma2Html:
             f.write('</html>\n')
 
 
-    def output_chapter_top(self, book, path, chapters):
+    def output_chapter_top(self, type, book, path, chapters):
         """_summary_
 
         Args:
+            type (_type_): _description_
             book (_type_): _description_
             path (_type_): _description_
             chapters (_type_): _description_
@@ -328,6 +344,12 @@ class MkKuma2Html:
         }}
     }}
   </script>'''.format(KEY=book[DB.BOOK_KEY]))
+
+            # 画面上のヘッダ出力
+            f.write('<div class="HeaderPage">\n')
+            f.write('<a href="../../Books{TYPE}.html"><span>ブックリストに戻る</span></a>\n'.format(TYPE=type))
+            f.write('</div>\n')
+
             f.write('<div class="wrapper">')
             f.write('<div class="ChapterHeader">')
             f.write('<img src="{THUMB}" width="80%"><br><span class="chbox"> {TITLE} </span>\n'.format(THUMB=book[DB.THUMB], TITLE=book[DB.TITLE]))
@@ -385,27 +407,35 @@ class MkKuma2Html:
 
                 # 前チャプター移動
                 chap = chapters[index - 1]
+                f.write('<div>\n')
                 f.write('<a href="{CHAPTER_URL}.html">{CHAPTER}</a>\n'.format(
                                 CHAPTER_URL=book[DB.BOOK_KEY] + '_' + chap[DB.CHAPTER_KEY], CHAPTER=chap[DB.CHAPTER_KEY]
                             ))
+                f.write('</div>\n')
 
                 # チャプター選択
+                f.write('<div>\n')
                 f.write('<select onChange="location.href=value;">\n')
-                cur = 0
+                f.write('<option value="{CHAPTER}.html">Cahpter List</option>\n'.format(CHAPTER=book[DB.BOOK_KEY]))
                 for chap in chapters:
-                    cur = cur + 1
-                    f.write('<option value="{CHAPTER}.html"{SELECT}>{CUR}/{MAX}</option>\n'.format(
-                            CHAPTER=book[DB.BOOK_KEY] + '_' + chap[DB.CHAPTER_KEY], CUR=cur, MAX=max, SELECT=' selected' if chap[DB.CHAPTER_KEY] == chapter[DB.CHAPTER_KEY] else '' ))
+                    f.write('<option value="{CHAPTER}.html"{SELECT}>{NUM}</option>\n'.format(
+                            CHAPTER=book[DB.BOOK_KEY] + '_' + chap[DB.CHAPTER_KEY],
+                            NUM=chap[DB.CHAPTER_NUM],
+                            SELECT=' selected' if chap[DB.CHAPTER_KEY] == chapter[DB.CHAPTER_KEY] else '' ))
                 f.write('</select>\n')
+                f.write('</div>\n')
 
+                f.write('<div class="title">\n')
                 f.write('<span> {TITLE} </span>\n'.format(TITLE=book[DB.TITLE]))
+                f.write('</div>\n')
 
                 # 次チャプター移動
                 chap = chapters[index + 1] if index + 1 != max else chapters[0]
+                f.write('<div>\n')
                 f.write('<a href="{CHAPTER_URL}.html">{CHAPTER}</a>\n'.format(
                                 CHAPTER_URL=book[DB.BOOK_KEY] + '_' + chap[DB.CHAPTER_KEY], CHAPTER=chap[DB.CHAPTER_KEY]
                             ))
-
+                f.write('</div>\n')
                 f.write('</div>\n')
 
                 f.write('<div id="content" class="Contents">\n')
