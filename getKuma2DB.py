@@ -11,6 +11,7 @@
 # - Updated On
 
 import asyncio
+import os
 import aiohttp
 from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
@@ -228,10 +229,22 @@ class getKuma2DB:
             self.db.insert_book(**{DB.BOOK_KEY: book_key, DB.URL: url, DB.BOOK_TYPE: type.upper(), DB.USE_FLAG: DB.USE_FLAG_ON})
             self.db.commit()
         else:
-            if result[0][DB.BOOK_ID] != type.upper():
+            if result[0][DB.BOOK_TYPE] != type.upper():
                 logging.info('{URL} はすでに登録済み。TYPE {OLD} -> {NEW}'.format(URL=url, OLD=result[0][DB.BOOK_TYPE], NEW=type.upper()))
                 self.db.update_book(result[0][DB.BOOK_ID], **{DB.BOOK_TYPE: type.upper()})
                 self.db.commit()
+
+                # チャプター格納ディレクトリ作成
+                os.makedirs('img{TYPE}'.format(TYPE=type.upper()), exist_ok=True)
+
+                # 
+                if os.path.isdir(os.path.join('img{TYPE}'.format(TYPE=result[0][DB.BOOK_TYPE]), result[0][DB.BOOK_KEY])):
+                    olddir = os.path.join('img{TYPE}'.format(TYPE=result[0][DB.BOOK_TYPE]), result[0][DB.BOOK_KEY])
+                    newdir = os.path.join('img{TYPE}'.format(TYPE=type.upper()), result[0][DB.BOOK_KEY])
+
+                    logging.info('{OLD} -> {NEW}'.format(OLD=olddir, NEW=newdir))
+                    os.rename(olddir, newdir)
+
             else:
                 logging.info('{URL} はすでに登録済み。'.format(URL=url))
 
@@ -384,6 +397,17 @@ class getKuma2DB:
 
         self.db.commit()
 
+    @func_hook
+    def printinfo(self, book_key):
+        """_summary_
+
+        Args:
+            url (_type_): _description_
+        """
+        vals = self.db.select_book(**{DB.URL: None, DB.BOOK_KEY: book_key, DB.BOOK_TYPE: None, DB.TITLE: None, DB.USE_FLAG: None})
+        for val in vals:
+            print(f'{val[DB.BOOK_KEY]}={val[DB.BOOK_TYPE]} {val[DB.URL]} {val[DB.TITLE]}')
+
 #
 # メイン
 #
@@ -402,6 +426,11 @@ def main():
         else:
             # テーブル登録
             kuma.addbook(url, type)
+        kuma.close()
+
+    elif len(sys.argv) == 2:
+        kuma = getKuma2DB()
+        kuma.printinfo(sys.argv[1])
         kuma.close()
 
     elif len(sys.argv) == 1:
