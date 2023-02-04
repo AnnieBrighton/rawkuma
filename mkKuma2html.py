@@ -177,7 +177,6 @@ HEADER='''<html xmlns="https://www.w3.org/1999/xhtml" lang="en-US">
 
         span.chapterdate {
            font-size: 18px;
-            color: #888;
         }
 
         ul {
@@ -188,6 +187,9 @@ HEADER='''<html xmlns="https://www.w3.org/1999/xhtml" lang="en-US">
             overflow: auto;
         }
 
+        a img {
+            vertical-align: top;
+        }
     </style>
 </head>
 '''
@@ -314,7 +316,18 @@ class MkKuma2Html:
             f.write(HEADER)
 
             # HTMLボディ出力
-            f.write('<body>\n')
+            f.write('<body">\n')
+            f.write('''
+  <script type="text/javascript">
+    function setStyle() {{
+        const item = localStorage.getItem("{KEY}");
+        var tags = document.getElementsByClassName("type-" + item);
+        len = tags.length|0;
+        for (i = 0; i < len; i = i + 1) {{
+            tags[i].style.background = "#A09080";
+        }}
+    }}
+  </script>'''.format(KEY=book[DB.BOOK_KEY]))
             f.write('<div class="wrapper">')
             f.write('<div class="ChapterHeader">')
             f.write('<img src="{THUMB}" width="80%"><br><span class="chbox"> {TITLE} </span>\n'.format(THUMB=book[DB.THUMB], TITLE=book[DB.TITLE]))
@@ -327,7 +340,7 @@ class MkKuma2Html:
                 # print(chap)
                 f.write('''
 <li>
-<div class=chbox>
+<div class="chbox type-{CCS}">
     <div class="eph-num">
     <a href="{CHAPTER_URL}.html">
         <span class="chapternum">{NUM}</span>
@@ -339,12 +352,14 @@ class MkKuma2Html:
                 '''.format(
                     CHAPTER_URL=book[DB.BOOK_KEY] + '_' + chap[DB.CHAPTER_KEY],
                     CHAPTER=chap[DB.CHAPTER_KEY],
+                    CCS=chap[DB.CHAPTER_KEY].replace('.', '-'),
                     NUM=chap[DB.CHAPTER_NUM],
                     DATE=chap[DB.CHAPTER_DATE].strftime('%Y年%m月%d日')
                 ))
 
             f.write('</ul></div>')
             f.write('</div>')
+            f.write('<script type="text/javascript">setStyle();</script>')
             f.write('</body>\n')
             f.write('</html>\n')
 
@@ -406,6 +421,12 @@ class MkKuma2Html:
                 f.write('<div class="Footer"><a href="{CHAPTER_URL}.html">{CHAPTER}</a></div>\n'.format(
                                 CHAPTER_URL=book[DB.BOOK_KEY] + '_' + chap[DB.CHAPTER_KEY], CHAPTER=chap[DB.CHAPTER_KEY]
                             ))
+                # ブラウザlocalStrageにチャプターキーを保存
+                f.write('''
+<script type="text/javascript">
+    localStorage.setItem("{BOOK_KEY}", "{CHAPTER_KEY}");
+</script>'''.format(BOOK_KEY=book[DB.BOOK_KEY], CHAPTER_KEY=chapter[DB.CHAPTER_KEY].replace('.', '-')))
+
                 f.write('</body>\n')
                 f.write('</html>\n')
 
