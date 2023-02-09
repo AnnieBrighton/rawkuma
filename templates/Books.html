@@ -1,0 +1,24 @@
+<html xmlns="https://www.w3.org/1999/xhtml" lang="en-US">
+    <head>
+        <meta charset="utf-8">
+        <meta name="referrer" content="no-referrer">
+        <style>
+    <%include file="header_style.css" />
+        </style>
+    </head>
+    <body>
+        <div class="chbox">
+            <ul class="clstyle">
+                % for type in types:
+                <li>
+                    <div class=chbox>
+                        <div class="eph-num">
+                            <a href="Books${type}.html"><span>分類${type}</span></a>
+                        </div>
+                    </div>
+                </li>
+                % endfor
+            </ul>
+        </div>
+    </body>
+</html>

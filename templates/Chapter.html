@@ -1,0 +1,52 @@
+<html xmlns="https://www.w3.org/1999/xhtml" lang="en-US">
+    <head>
+        <meta charset="utf-8">
+        <meta name="referrer" content="no-referrer">
+        <style>
+    <%include file="header_style.css" />
+        </style>
+    </head>
+    <body>
+        <div class="HeaderPage">
+            <div>
+                <a href="${prev["HREF"]}">${prev["NUM"]}</a>
+            </div>
+            <div>
+                <select onChange="location.href=value;">
+                    <option value="${chapter_top}">
+                        Cahpter List
+                    </option>
+                    % for chapter in chapters:
+                    % if chapter["KEY"] == chapter_key:
+                    <option value="${chapter["HREF"]}" selected>
+                        ${chapter["NUM"]}
+                    </option>
+                    % else:
+                    <option value="${chapter["HREF"]}">
+                        ${chapter["NUM"]}
+                    </option>
+                    % endif
+                    % endfor
+                </select>
+            </div>
+            <div class="title">
+                <span>${title}</span>
+            </div>
+            <div>
+                <a href="${next["HREF"]}">${next["NUM"]}</a>
+            </div>
+        </div>
+        <div id="content" class="Contents">
+            % for page in pages:
+            <img loading="lazy" src="${page}">
+            % endfor
+        </div>
+        <div class="Footer">
+            <a href="${next["HREF"]}">${next["NUM"]}</a>
+        </div>
+        <%doc>
+        キーを保存する
+        </%doc>
+        <script type="text/javascript">localStorage.setItem("${book_key}", "${chapter_key}");</script>
+    </body>
+</html>

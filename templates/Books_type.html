@@ -1,0 +1,29 @@
+<html xmlns="https://www.w3.org/1999/xhtml" lang="en-US">
+    <head>
+        <meta charset="utf-8">
+        <meta name="referrer" content="no-referrer">
+        <style>
+    <%include file="header_style.css" />
+        </style>
+    </head>
+    <body>
+        <div class="HeaderBook">
+            <div class="chbox">
+                <tr>
+                    % for type in types:
+                    <th>
+                        <a href="Books${type}.html">分類${type}</a>
+                    </th>
+                    % endfor
+                </tr>
+            </div>
+        </div>
+        <div>
+            % for book in books:
+            <a href="${book["HREF"]}">
+                <img src="${book["SRC"]}" width="200" height="auto">
+            </a>
+            % endfor
+        </div>
+    </body>
+</html>

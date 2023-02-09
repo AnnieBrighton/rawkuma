@@ -1,0 +1,190 @@
+.HeaderPage {
+    position: sticky;
+    /* ヘッダーを固定する */
+    top: 0;
+    /* 上部から配置の基準位置を決める */
+    left: 0;
+    /* 左から配置の基準位置を決める */
+    width: 100%;
+    /* ヘッダーの横幅を指定する */
+    /* height: 15px; */
+    /* ヘッダーの高さを指定する */
+    padding: 2px;
+    /* ヘッダーの余白を指定する(上下左右) */
+    background-color: #31a9ee;
+    /* ヘッダーの背景色を指定する */
+    color: #000000;
+    /* フォントの色を指定する */
+    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
+    display: flex;
+}
+
+.HeaderBook {
+    position: sticky;
+    /* ヘッダーを固定する */
+    top: 0;
+    /* 上部から配置の基準位置を決める */
+    left: 0;
+    /* 左から配置の基準位置を決める */
+    width: 100%;
+    /* ヘッダーの横幅を指定する */
+    height: auto;
+    /* ヘッダーの高さを指定する */
+    padding: 10px;
+    /* ヘッダーの余白を指定する(上下左右) */
+    background-color: #31a9ee;
+    /* ヘッダーの背景色を指定する */
+    color: #000000;
+    /* フォントの色を指定する */
+}
+
+/*左と右を囲う全体のエリア*/
+.wrapper{
+    position: relative;/*position stickyの基点にするため relativeをかける*/
+    display: flex;/*左エリア、右エリア横並び指定*/
+    flex-wrap: wrap;/*ボックスの折り返し可*/
+}
+
+.ChapterHeader {
+    /*左固定記述*/
+    position: -webkit-sticky;/*Safari用*/
+    position: sticky;
+    /* ヘッダーを固定する */
+    top: 0;
+    /* 上部から配置の基準位置を決める */
+    left: 0;
+    /* 左から配置の基準位置を決める */
+    width: 47%;
+    /* ヘッダーの横幅を指定する */
+    height: 100%;
+    /* ヘッダーの高さを指定する */
+    padding: 10px;
+    /* ヘッダーの余白を指定する(上下左右) */
+    background-color: #31a9ee;
+    /* ヘッダーの背景色を指定する */
+    color: #000000;
+    /* フォントの色を指定する */
+    float:left;
+}
+
+.ChapterList {
+    position: -webkit-sticky;/*Safari用*/
+    position: sticky;
+    /* ヘッダーを固定する */
+    top: 0;
+    /* 上部から配置の基準位置を決める */
+    left: 0;
+    /* 左から配置の基準位置を決める */
+    width: 47%;
+    /* ヘッダーの横幅を指定する */
+    height: 100%;
+    /* ヘッダーの高さを指定する */
+    padding: 10px;
+    /* ヘッダーの余白を指定する(上下左右) */
+    background-color: #31a9ee;
+    /* ヘッダーの背景色を指定する */
+    color: #000000;
+    /* フォントの色を指定する */
+    float:right;
+}
+
+
+.Footer {
+    width: 100%;
+    /* ヘッダーの横幅を指定する */
+    height: 15px;
+    /* ヘッダーの高さを指定する */
+    padding: 10px;
+    /* ヘッダーの余白を指定する(上下左右) */
+    background-color: #31a9ee;
+    /* ヘッダーの背景色を指定する */
+    color: #000000;
+    /* フォントの色を指定する */
+}
+
+.Contents img {
+    width: 100%;
+    /* コンテンツの横幅を指定する */
+    overflow: auto;
+    /* コンテンツの表示を自動に設定（スクロール） */
+    display: block;
+    margin: auto;
+    /* 中央よせ */
+}
+
+.chbox {
+    background: #efefef;
+    background-image: initial;
+    background-position-x: initial;
+    background-position-y: initial;
+    background-size: initial;
+    background-repeat-x: initial;
+    background-repeat-y: initial;
+    background-attachment: initial;
+    background-origin: initial;
+    background-clip: initial;
+    background-color: rgb(239, 239, 239);
+    border-color: #efefef;
+    border-top-color: rgb(239, 239, 239);
+    border-right-color: rgb(239, 239, 239);
+    border-bottom-color: rgb(239, 239, 239);
+    border-left-color: rgb(239, 239, 239);
+}
+
+.chbox {
+    margin-left: 0;
+}
+
+.chbox {
+    overflow: hidden;
+    padding: 5px 10px;
+    border: 1px solid #333;
+    font-size: 24px;
+    margin: 0 5px;
+    margin-bottom: 10px;
+    position: relative;
+    border-radius: 5px;
+    font-family:  "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
+}
+
+.clstyle {
+    margin-left: 0;
+}
+
+.eph-num {
+    width: 100%;
+}
+span.chapternum {
+    font-weight: 400;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+span.chapterdate {
+    font-size: 18px;
+}
+
+ul {
+    padding: 0;
+    list-style: none;
+    margin: 0;
+    margin-left: -5px;
+    overflow: auto;
+}
+
+a img {
+    vertical-align: top;
+}
+
+div.title {
+    width: 70%; /* 要素の横幅を指定 */
+    white-space: nowrap; /* 横幅のMAXに達しても改行しない */
+    overflow: hidden; /* ハミ出した部分を隠す */
+    text-overflow: ellipsis; /* 「…」と省略 */
+    -webkit-text-overflow: ellipsis; /* Safari */
+    -o-text-overflow: ellipsis; /* Opera */            
+}
+
+select {
+    font-size: 14px;
+}
