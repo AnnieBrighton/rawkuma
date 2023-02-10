@@ -47,6 +47,6 @@
         <%doc>
         キーを保存する
         </%doc>
-        <script type="text/javascript">localStorage.setItem("${book_key}", "${chapter_key}");</script>
+        <script type="text/javascript">localStorage.setItem("${book_key}", "${chapter_key.replace('.', '-')}");</script>
     </body>
 </html>

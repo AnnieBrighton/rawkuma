@@ -30,7 +30,7 @@
                 <ul class="clstyle">
                     % for chapter in chapters:
                     <li>
-                        <div class="chbox type-${chapter["KEY"]}">
+                        <div class="chbox type-${chapter["KEY"].replace('.', '-')}">
                             <div class="eph-num">
                                 <a href="${chapter["HREF"]}"><span class="chapternum">${chapter["NUM"]}</span><span class="chapterdate">${chapter["DATE"]}</span></a>
                             </div>

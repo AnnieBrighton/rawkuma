@@ -103,7 +103,7 @@ class MkKuma2Html:
                 'title': book[DB.TITLE],
                 'book_key': book[DB.BOOK_KEY],
                 'chapters': [
-                    {'KEY': chap[DB.CHAPTER_KEY].replace('.', '-'),
+                    {'KEY': chap[DB.CHAPTER_KEY],
                     'HREF': book[DB.BOOK_KEY] + '_' + chap[DB.CHAPTER_KEY] + '.html',
                     'NUM': chap[DB.CHAPTER_NUM],
                     'DATE': chap[DB.CHAPTER_DATE].strftime('%Y年%m月%d日')
@@ -136,11 +136,11 @@ class MkKuma2Html:
             data = {'prev': {'HREF': book[DB.BOOK_KEY] + '_' + prev[DB.CHAPTER_KEY] + '.html', 'NUM': prev[DB.CHAPTER_NUM]},
                     'next': {'HREF': book[DB.BOOK_KEY] + '_' + next[DB.CHAPTER_KEY] + '.html', 'NUM': next[DB.CHAPTER_NUM]},
                     'book_key': book[DB.BOOK_KEY],
-                    'chapter_key': chapter[DB.CHAPTER_KEY].replace('.', '-'),
+                    'chapter_key': chapter[DB.CHAPTER_KEY],
                     'title': book[DB.TITLE],
                     'chapter_top': book[DB.BOOK_KEY] + '.html',
                     'chapters': [
-                        {'KEY': chap[DB.CHAPTER_KEY].replace('.', '-'),
+                        {'KEY': chap[DB.CHAPTER_KEY],
                          'HREF': book[DB.BOOK_KEY] + '_' + chap[DB.CHAPTER_KEY] + '.html',
                          'NUM': chap[DB.CHAPTER_NUM]
                         } for chap in chapters
