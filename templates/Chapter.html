@@ -8,7 +8,7 @@
     </head>
     <body>
         <div class="HeaderPage">
-            <div>
+            <div class="Prev">
                 <a href="${prev["HREF"]}">${prev["NUM"]}</a>
             </div>
             <div>
@@ -32,7 +32,7 @@
             <div class="title">
                 <span>${title}</span>
             </div>
-            <div>
+            <div class="Next">
                 <a href="${next["HREF"]}">${next["NUM"]}</a>
             </div>
         </div>
@@ -47,6 +47,15 @@
         <%doc>
         キーを保存する
         </%doc>
-        <script type="text/javascript">localStorage.setItem("${book_key}", "${chapter_key.replace('.', '-')}");</script>
+        <script type="text/javascript">
+            const items = localStorage.getItem("${book_key}");
+            var before_chapter = "${chapter_key.replace('.', '-')}";
+            if (items != null && items != "") {
+                if (before_chapter != items.split(' ')[0]) {
+                    before_chapter += ' ' + items.split(' ')[0]
+                }
+            }
+            localStorage.setItem("${book_key}", before_chapter);
+        </script>
     </body>
 </html>

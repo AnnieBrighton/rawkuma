@@ -7,16 +7,6 @@
         </style>
     </head>
     <body>
-        <script type="text/javascript">
-    function setStyle() {
-        const item = localStorage.getItem("${book_key}");
-        var tags = document.getElementsByClassName("type-" + item);
-        len = tags.length|0;
-        for (i = 0; i < len; i = i + 1) {
-            tags[i].style.background = "#A09080";
-        }
-    }
-        </script>
         <div class="HeaderPage">
             <a href="../../Books${type}.html"><span>ブックリストに戻る</span></a>
         </div>
@@ -43,6 +33,19 @@
         <%doc>
         ローカルストレージからキー=book_keyで情報を取得
         </%doc>
-        <script type="text/javascript">setStyle();</script>
+        <script type="text/javascript">
+            const items = localStorage.getItem("${book_key}");
+            if (items != null && items != "") {
+                var color = "#A09080";
+                for (const item of items.split(' ')) {
+                    var tags = document.getElementsByClassName("type-" + item);
+                    len = tags.length|0;
+                    for (i = 0; i < len; i = i + 1) {
+                        tags[i].style.background = color;
+                    }
+                    color = "#a090807d";
+                }
+            }
+        </script>
     </body>
 </html>

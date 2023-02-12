@@ -17,6 +17,7 @@
     /* フォントの色を指定する */
     font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
     display: flex;
+    font-size: 24px;
 }
 
 .HeaderBook {
@@ -39,15 +40,19 @@
 }
 
 /*左と右を囲う全体のエリア*/
-.wrapper{
-    position: relative;/*position stickyの基点にするため relativeをかける*/
-    display: flex;/*左エリア、右エリア横並び指定*/
-    flex-wrap: wrap;/*ボックスの折り返し可*/
+.wrapper {
+    position: relative;
+    /*position stickyの基点にするため relativeをかける*/
+    display: flex;
+    /*左エリア、右エリア横並び指定*/
+    flex-wrap: wrap;
+    /*ボックスの折り返し可*/
 }
 
 .ChapterHeader {
     /*左固定記述*/
-    position: -webkit-sticky;/*Safari用*/
+    position: -webkit-sticky;
+    /*Safari用*/
     position: sticky;
     /* ヘッダーを固定する */
     top: 0;
@@ -64,11 +69,12 @@
     /* ヘッダーの背景色を指定する */
     color: #000000;
     /* フォントの色を指定する */
-    float:left;
+    float: left;
 }
 
 .ChapterList {
-    position: -webkit-sticky;/*Safari用*/
+    position: -webkit-sticky;
+    /*Safari用*/
     position: sticky;
     /* ヘッダーを固定する */
     top: 0;
@@ -85,7 +91,7 @@
     /* ヘッダーの背景色を指定する */
     color: #000000;
     /* フォントの色を指定する */
-    float:right;
+    float: right;
 }
 
 
@@ -144,7 +150,7 @@
     margin-bottom: 10px;
     position: relative;
     border-radius: 5px;
-    font-family:  "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
+    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
 }
 
 .clstyle {
@@ -154,6 +160,7 @@
 .eph-num {
     width: 100%;
 }
+
 span.chapternum {
     font-weight: 400;
     text-overflow: ellipsis;
@@ -177,14 +184,30 @@ a img {
 }
 
 div.title {
-    width: 70%; /* 要素の横幅を指定 */
-    white-space: nowrap; /* 横幅のMAXに達しても改行しない */
-    overflow: hidden; /* ハミ出した部分を隠す */
-    text-overflow: ellipsis; /* 「…」と省略 */
-    -webkit-text-overflow: ellipsis; /* Safari */
-    -o-text-overflow: ellipsis; /* Opera */            
+    white-space: nowrap;
+    /* 横幅のMAXに達しても改行しない */
+    overflow: hidden;
+    /* ハミ出した部分を隠す */
+    text-overflow: ellipsis;
+    /* 「…」と省略 */
+    -webkit-text-overflow: ellipsis;
+    /* Safari */
+    -o-text-overflow: ellipsis;
+    /* Opera */
+    font-size: 14px;
+    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
+}
+
+div.Next {
+    width: 20%;
+    font-size: 24px;
+}
+
+div.Prev {
+    width: 20%;
+    font-size: 24px;
 }
 
 select {
-    font-size: 14px;
+    font-size: 18px;
 }
