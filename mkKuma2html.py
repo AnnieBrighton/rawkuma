@@ -143,7 +143,7 @@ class MkKuma2Html:
                         {'KEY': chap[DB.CHAPTER_KEY],
                          'HREF': book[DB.BOOK_KEY] + '_' + chap[DB.CHAPTER_KEY] + '.html',
                          'NUM': chap[DB.CHAPTER_NUM]
-                        } for chap in chapters
+                        } for chap in sorted(chapters, key=lambda x: x[DB.CHAPTER_KEY], reverse=True)
                     ],
                     'pages': [ page['page_url'] for page in pages ]
                 }
