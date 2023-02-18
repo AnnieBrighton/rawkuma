@@ -37,8 +37,12 @@
             </div>
         </div>
         <div id="content" class="Contents">
-            % for page in pages:
+            % for i, page in enumerate(pages):
+            % if i <= 2:
+            <img src="${page}">
+            % else:
             <img loading="lazy" src="${page}">
+            % endif
             % endfor
         </div>
         <div class="Footer">
