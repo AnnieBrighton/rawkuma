@@ -140,6 +140,7 @@ class DB:
         value.append(kwargs[DB.THUMB]) if DB.THUMB in kwargs else None
         value.append(kwargs[DB.KUMA_TITLE]) if DB.KUMA_TITLE in kwargs else None
         value.append(kwargs[DB.KUMA_AUTHOR]) if DB.KUMA_AUTHOR in kwargs else None
+        value.append(kwargs[DB.KUMA_TAG]) if DB.KUMA_TAG in kwargs else None
         value.append(kwargs[DB.KUMA_DESCRIPTION]) if DB.KUMA_DESCRIPTION in kwargs else None
         value.append(kwargs[DB.KUMA_POSTED]) if DB.KUMA_POSTED in kwargs else None
         value.append(kwargs[DB.KUMA_UPDATED]) if DB.KUMA_UPDATED in kwargs else None
@@ -154,6 +155,7 @@ class DB:
         sql += ', thumb_url = ? ' if DB.THUMB in kwargs else ""
         sql += ', kuma_title = ? ' if DB.KUMA_TITLE in kwargs else ""
         sql += ', kuma_author = ? ' if DB.KUMA_AUTHOR in kwargs else ""
+        sql += ', kuma_tag = ? ' if DB.KUMA_TAG in kwargs else ""
         sql += ', kuma_description = ? ' if DB.KUMA_DESCRIPTION in kwargs else ""
         sql += ', kuma_posted = ? ' if DB.KUMA_POSTED in kwargs else ""
         sql += ', kuma_updated = ? ' if DB.KUMA_UPDATED in kwargs else ""
@@ -175,6 +177,7 @@ class DB:
         sql += ', thumb_url ' if DB.THUMB in kwargs else ""
         sql += ', kuma_title ' if DB.KUMA_TITLE in kwargs else ""
         sql += ', kuma_author ' if DB.KUMA_AUTHOR in kwargs else ""
+        sql += ', kuma_tag ' if DB.KUMA_TAG in kwargs else ""
         sql += ', kuma_description ' if DB.KUMA_DESCRIPTION in kwargs else ""
         sql += ', kuma_posted ' if DB.KUMA_POSTED in kwargs else ""
         sql += ', kuma_updated ' if DB.KUMA_UPDATED in kwargs else ""
@@ -208,6 +211,7 @@ class DB:
             val.update({DB.THUMB: l.pop(0)}) if DB.THUMB in kwargs else ""
             val.update({DB.KUMA_TITLE: l.pop(0)}) if DB.KUMA_TITLE in kwargs else ""
             val.update({DB.KUMA_AUTHOR: l.pop(0)}) if DB.KUMA_AUTHOR in kwargs else ""
+            val.update({DB.KUMA_TAG: l.pop(0)}) if DB.KUMA_TAG in kwargs else ""
             val.update({DB.KUMA_DESCRIPTION: l.pop(0)}) if DB.KUMA_DESCRIPTION in kwargs else ""
             if DB.KUMA_POSTED in kwargs:
                 v = l.pop(0)
