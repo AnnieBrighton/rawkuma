@@ -29,7 +29,7 @@ class MkKuma2Html:
         self.output_book(types)
 
         for type in types:
-            books = self.db.select_book(**{DB.BOOK_KEY: None, DB.TITLE: None, DB.BOOK_TYPE: type, DB.THUMB: None})
+            books = self.db.select_book(**{DB.BOOK_KEY: None, DB.TITLE: None, DB.BOOK_TYPE: type, DB.THUMB: None, DB.USE_FLAG: None})
 
             # ブック一覧HTML出力
             self.output_book_type(books, types, type)
@@ -77,7 +77,9 @@ class MkKuma2Html:
         data = {'types': [type for type in types],
                 'books': [
                     {'HREF': os.path.join('img{TYPE}'.format(TYPE=book[DB.BOOK_TYPE]), book[DB.BOOK_KEY], book[DB.BOOK_KEY] + ".html"),
-                     'SRC': book[DB.THUMB]
+                     'SRC': book[DB.THUMB],
+                     'FLAG': book[DB.USE_FLAG],
+                     'TITLE': book[DB.TITLE]
                     } for book in books
                 ]
             }
