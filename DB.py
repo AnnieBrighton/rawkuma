@@ -241,9 +241,7 @@ class DB:
 
     def getBookID(self, book_key) -> int:
         cur = self.conn.cursor()
-        cur.execute('''
-            select book_id from {TABLE} where book_key = ?
-        '''.format(TABLE=self.book_name_table), (book_key,))
+        cur.execute('select book_id from {TABLE} where book_key = ?'.format(TABLE=self.book_name_table), (book_key,))
 
         for row in cur.fetchall():
             cur.close()
@@ -259,7 +257,15 @@ class DB:
         cur.close()
         return len(lists) > 0
 
+    def delete_book(self, book_key) -> None:
+        cur = self.conn.cursor()
+        cur.execute('select book_id from {TABLE} where book_key = ?'.format(TABLE=self.book_name_table), (book_key,))
 
+        for val in cur.fetchall():
+            self.delete_chapter(val[0])
+
+        cur.execute('delete from {TABLE} where book_key = ?'.format(TABLE=self.book_name_table), (book_key,))
+        cur.close()
 
 
     def __create_table_chapter(self) -> None:
@@ -341,7 +347,19 @@ class DB:
         cur.close()
         return lists
 
+    def delete_chapter(self, book_id) -> None:
+        cur = self.conn.cursor()
+        cur.execute('select chapter_id from {TABLE} where book_id = ?'.format(TABLE=self.chapter_name_table), (book_id,))
+    
+        for val in cur.fetchall():
+            self.delete_page(val[0])
 
+        sql = 'delete from {TABLE} where book_id = ?'.format(TABLE=self.chapter_name_table)
+        value = (book_id,)
+        self.__logging.info(sql)
+        self.__logging.info(tuple(value))
+        cur.execute(sql, tuple(value))
+        cur.close()
 
 
     def __create_table_page(self) -> None:
@@ -378,3 +396,12 @@ class DB:
         lists = [ {DB.PAGE_ID: val[0], DB.PAGE: val[1], DB.PAGE_URL: val[2]} for val in cur.fetchall() ]
         cur.close()
         return lists
+
+    def delete_page(self, chapter_id) -> None:
+        cur = self.conn.cursor()
+        sql = 'delete from {TABLE} where chapter_id = ?'.format(TABLE=self.page_name_table)
+        value = (chapter_id,)
+        self.__logging.info(sql)
+        self.__logging.info(tuple(value))
+        cur.execute(sql, tuple(value))
+        cur.close()

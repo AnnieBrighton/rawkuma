@@ -214,6 +214,7 @@ class getKuma2DB:
     def __init__(self) -> None:
         self.db = DB(logging)
 
+    @func_hook
     def addbook(self, url, type) -> None:
         # urlが最後/で終わる場合、/を取り除く
         url = re.sub(r'/$', '', url)
@@ -230,7 +231,7 @@ class getKuma2DB:
         logging.info(result)
 
         if len(result) == 0:
-            self.db.insert_book(**{DB.BOOK_KEY: book_key, DB.URL: url, DB.BOOK_TYPE: type.upper(), DB.USE_FLAG: DB.USE_FLAG_ON})
+            self.db.insert_book(**{DB.BOOK_KEY: book_key, DB.URL: url, DB.BOOK_TYPE: type.upper(), DB.USE_FLAG: DB.USE_FLAG_ON, DB.KUMA_UPDATED: '1900-01-01 00:00:00+09:00'})
             self.db.commit()
         else:
             if result[0][DB.BOOK_TYPE] != type.upper():
@@ -256,6 +257,7 @@ class getKuma2DB:
         self.db.close()
 
     # ダウンロード
+    @func_hook
     def updatedb2(self, val):
         """ 
         """
@@ -389,18 +391,19 @@ class getKuma2DB:
             self.updatedb2(val)
 
 
+    def get_id(self, url) -> str:
+        lists = re.search(r'^https?://[^/]+/[^/]+/([^/]+)/?$', url)
+        return url if lists is None else lists[1]
+
     # flag set
     @func_hook
-    def flagset(self, url, type):
+    def flagset(self, url, type) -> None:
         """USEフラグ変更
-
         Args:
             url (_type_): BOOK URL
             type (_type_): 変更後のUSEフラグ
         """
-        lists = re.search(r'^https?://[^/]+/[^/]+/([^/]+)/?$', url)
-        book_key = url if lists is None else lists[1]
-
+        book_key = self.get_id(url)
         book_id = self.db.getBookID(book_key)
 
         self.db.update_book(book_id, **{DB.USE_FLAG: DB.USE_FLAG_ON if type.upper() == 'ON' else DB.USE_FLAG_OFF})
@@ -408,18 +411,53 @@ class getKuma2DB:
         self.db.commit()
 
     @func_hook
-    def printinfo(self, url):
-        """_summary_
-
+    def printinfo(self, url) -> None:
+        """情報出力
         Args:
             url (_type_): BOOK URL
         """
-        lists = re.search(r'^https?://[^/]+/[^/]+/([^/]+)/?$', url)
-        book_key = url if lists is None else lists[1]
+        book_key = self.get_id(url)
 
         vals = self.db.select_book(**{DB.URL: None, DB.BOOK_KEY: book_key, DB.BOOK_TYPE: None, DB.TITLE: None, DB.USE_FLAG: None})
         for val in vals:
             print(f'{val[DB.BOOK_KEY]}={val[DB.BOOK_TYPE]} {val[DB.URL]} {val[DB.TITLE]}')
+
+    @func_hook
+    def clean(self, url) -> None:
+        """チャプター、ページ情報削除
+        Args:
+            url (_type_): BOOK URL
+        """
+        book_key = self.get_id(url)
+
+        vals = self.db.select_book(**{DB.URL: None, DB.BOOK_ID: None, DB.BOOK_KEY: book_key})
+        for val in vals:
+            self.db.delete_chapter(val[DB.BOOK_ID])
+        self.db.commit()
+
+    @func_hook
+    def delete(self, url) -> None:
+        """BOOK削除
+        Args:
+            url (_type_): BOOK URL
+        """
+        book_key = self.get_id(url)
+        self.db.delete_book(book_key)
+        self.db.commit()
+
+    @func_hook
+    def update(self, url) -> None:
+        """BOOK情報更新
+        Args:
+            url (_type_): BOOK URL
+        """
+        book_key = self.get_id(url)
+        vals = self.db.select_book(**{DB.URL: None, DB.BOOK_KEY: book_key, DB.KUMA_UPDATED: None, DB.TITLE: None, DB.USE_FLAG: None})
+
+        for val in vals:
+            logging.info(f'新規更新 {val[DB.BOOK_ID]} {val[DB.BOOK_KEY]}')
+            val[DB.KUMA_UPDATED] = '1900-01-01 00:00:00+09:00'
+            self.updatedb2(val)
 
 #
 # メイン
@@ -436,9 +474,15 @@ def main():
         if type.upper() == 'ON' or type.upper() == 'OFF':
             # USEフラグ変更
             kuma.flagset(url, type)
-        elif 'A' <= type.upper() and type.upper() <= 'Z':
+        elif len(type) == 1 and 'A' <= type[0].upper() and type[0].upper() <= 'Z':
             # テーブル登録
             kuma.addbook(url, type)
+        elif type.upper() == 'CLEAN':
+            kuma.clean(url)
+        elif type.upper() == 'DELETE':
+            kuma.delete(url)
+        elif type.upper() == 'UPDATE':
+            kuma.update(url)
         else:
             logging.info('{TYPE} error'.format(TYPE=type))
         kuma.close()
