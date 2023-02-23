@@ -351,8 +351,9 @@ class getKuma2DB:
             'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8',
         }
 
-        self.db.select_book()
-        vals = self.db.select_book(**{DB.URL: None, DB.BOOK_KEY: None, DB.KUMA_UPDATED: None, DB.TITLE: None, DB.USE_FLAG: DB.USE_FLAG_ON})
+        # DBの更新対象を、USEフラグがONで、かつ、更新日が7日より前のBOOK
+        before_week = datetime.now(timezone(timedelta(hours=9), 'JST')) - timedelta(days=7)
+        vals = self.db.select_book(**{DB.URL: None, DB.BOOK_KEY: None, DB.KUMA_UPDATED: before_week.date().strftime('%Y-%m-%d'), DB.TITLE: None, DB.USE_FLAG: DB.USE_FLAG_ON})
 
         newvals = []
 

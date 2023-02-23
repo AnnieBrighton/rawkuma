@@ -182,18 +182,32 @@ class DB:
         sql += ', kuma_posted ' if DB.KUMA_POSTED in kwargs else ""
         sql += ', kuma_updated ' if DB.KUMA_UPDATED in kwargs else ""
         sql += ' from {TABLE} '.format(TABLE=self.book_name_table)
-        sql += ' where book_id = ?' if DB.BOOK_ID in kwargs and kwargs[DB.BOOK_ID] is not None else ""
-        sql += ' where book_key = ?' if DB.BOOK_KEY in kwargs and kwargs[DB.BOOK_KEY] is not None else ""
-        sql += ' where book_type = ?' if DB.BOOK_TYPE in kwargs and kwargs[DB.BOOK_TYPE] is not None else ""
-        sql += ' where use_flag = ?' if DB.USE_FLAG in kwargs and kwargs[DB.USE_FLAG] is not None else ""
-        sql += ' order by kuma_updated desc'
-        self.__logging.info(sql)
 
         value = []
-        value.append(kwargs[DB.BOOK_ID]) if DB.BOOK_ID in kwargs and kwargs[DB.BOOK_ID] is not None else None
-        value.append(kwargs[DB.BOOK_KEY]) if DB.BOOK_KEY in kwargs and kwargs[DB.BOOK_KEY] is not None else None
-        value.append(kwargs[DB.BOOK_TYPE]) if DB.BOOK_TYPE in kwargs and kwargs[DB.BOOK_TYPE] is not None else None
-        value.append(kwargs[DB.USE_FLAG]) if DB.USE_FLAG in kwargs and kwargs[DB.USE_FLAG] is not None else None
+        where = []
+        if DB.BOOK_ID in kwargs and kwargs[DB.BOOK_ID] is not None:
+            where.append('book_id = ?')
+            value.append(kwargs[DB.BOOK_ID])
+
+        if DB.BOOK_KEY in kwargs and kwargs[DB.BOOK_KEY] is not None:
+            where.append('book_key = ?')
+            value.append(kwargs[DB.BOOK_KEY])
+
+        if DB.BOOK_TYPE in kwargs and kwargs[DB.BOOK_TYPE] is not None:
+            where.append('book_type = ?')
+            value.append(kwargs[DB.BOOK_TYPE])
+
+        if DB.USE_FLAG in kwargs and kwargs[DB.USE_FLAG] is not None:
+            where.append('use_flag = ?')
+            value.append(kwargs[DB.USE_FLAG])
+
+        if DB.KUMA_UPDATED in kwargs and kwargs[DB.KUMA_UPDATED] is not None:
+            where.append('kuma_updated < ?')
+            value.append(kwargs[DB.KUMA_UPDATED])
+
+        sql += ' where {W}'.format(W=' and '.join(where)) if len(where) != 0 else ''
+        sql += ' order by kuma_updated desc'
+        self.__logging.info(sql)
 
         self.__logging.info(tuple(value))
         cur.execute(sql, tuple(value))
