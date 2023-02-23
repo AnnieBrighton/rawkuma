@@ -38,20 +38,20 @@
         </div>
         <div id="content" class="Contents">
             % for i, page in enumerate(pages):
-            % if i <= 2:
-            <img src="${page}">
+            % if i > 2:
+            <img loading="lazy" class="noContextMenu" src="${page}">
             % else:
-            <img loading="lazy" src="${page}">
+            <img class="noContextMenu" src="${page}">
             % endif
             % endfor
         </div>
         <div class="Footer">
             <a href="${next["HREF"]}">${next["NUM"]}</a>
         </div>
-        <%doc>
-        キーを保存する
-        </%doc>
         <script type="text/javascript">
+            <%doc>
+            現在閲覧中のチャプターをキーに保存する。
+            </%doc>
             const items = localStorage.getItem("${book_key}");
             var before_chapter = "${chapter_key.replace('.', '-')}";
             if (items != null && items != "") {
@@ -60,6 +60,18 @@
                 }
             }
             localStorage.setItem("${book_key}", before_chapter);
+
+            <%doc>
+            画像要素に対しては、右クリック・長押しでメニューを出さない。
+            </%doc>
+            var noContextMenuByClass = document.getElementsByClassName('noContextMenu');
+            for (var i=0, len=noContextMenuByClass.length|0; i<len; i=i+1|0) {
+                noContextMenuByClass[i].addEventListener('contextmenu', e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return false;
+                });
+            }
         </script>
     </body>
 </html>

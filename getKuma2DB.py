@@ -22,6 +22,7 @@ from lxml import etree
 from requests import session, exceptions
 from time import sleep
 import traceback
+import unicodedata
 
 from urllib.parse import quote
 from DB import DB
@@ -161,8 +162,8 @@ class getHTML(getHTTP):
 
     def getDescription(self):
         # Synopsis Strategic Lovers
-        lists = self.__html.xpath('//div[@class="wd-full" and h2/text()="Synopsis Strategic Lovers"]/dev/p/text()')
-        return str(lists[0]).strip() if len(lists) > 0 else ''
+        lists = self.__html.xpath('//div[@class="wd-full"]/div[@itemprop="description"]/p/text()')
+        return '\n'.join([str(var).strip() for var in lists])
 
     # 登録時刻を取得
     def getPostedOn(self):
@@ -190,13 +191,16 @@ class getGooglBooks(getHTTP):
             if val == '':
                 continue
 
-            json = self.getJSON('https://www.googleapis.com/books/v1/volumes?q=' + quote(val))
+            json = self.getJSON('https://www.googleapis.com/books/v1/volumes?q=intitle:' + quote(val))
             if 'items' in json:
                 for item in json['items']:
                     if item['volumeInfo']['language'] == 'ja':
                         authors = item['volumeInfo']['authors'] if 'authors' in item['volumeInfo'] else []
                         title = item['volumeInfo']['title']
-                        r = SequenceMatcher(None, val.strip(), title.strip()).ratio()
+                        # 正規化形式:NFC に統一して比較
+                        r = SequenceMatcher(None,
+                                            unicodedata.normalize('NFC', val.strip()),
+                                            unicodedata.normalize('NFC', re.sub(' [0-9]+ ?$', '', title.strip()))).ratio()
                         if r > max and r > 0.7:
                             t = val
                             a = authors
@@ -265,10 +269,11 @@ class getKuma2DB:
 
         kuma_tags = html.getTAGlist()
         kuma_artists = html.getARTIST()
-        kuma_title = html.getTitle()
+        kuma_titles = html.getTitle()
         kuma_post = html.getPostedOn()
         kuma_update = html.getUpdatedOn()
         kuma_thumb = html.getThumbnail()
+        kuma_description = html.getDescription()
 
         if kuma_update == val[DB.KUMA_UPDATED]:
             # 取得更新日付とDB上の更新日付が同じ
@@ -277,19 +282,22 @@ class getKuma2DB:
 
         logging.info('{BOOK}更新'.format(BOOK=book_key))
 
-        books = getGooglBooks()
-        title, author = books.getTitle(kuma_title)
-
         data = {
-            DB.TITLE: title,
-            DB.AUTHOR: ','.join(author),
             DB.THUMB: kuma_thumb,
-            DB.KUMA_TITLE: kuma_title[0],
+            DB.KUMA_TITLE: ','.join(kuma_titles),
             DB.KUMA_AUTHOR: ','.join(kuma_artists),
             DB.KUMA_TAG: ','.join(kuma_tags),
+            DB.KUMA_DESCRIPTION: kuma_description,
             DB.KUMA_POSTED: kuma_post,
             DB.KUMA_UPDATED: kuma_update
         }
+
+        if val[DB.TITLE] is None or val[DB.TITLE] == '':
+            books = getGooglBooks()
+            title, author = books.getTitle(kuma_titles)
+            data[DB.TITLE] = title
+            data[DB.AUTHOR] = ','.join(author)
+
         self.db.update_book(book_id, **data)
 
         for url in urls:
@@ -389,7 +397,8 @@ class getKuma2DB:
             url (_type_): BOOK URL
             type (_type_): 変更後のUSEフラグ
         """
-        book_key = re.search(r'^https?://[^/]+/[^/]+/([^/]+)/?$', url)[1]
+        lists = re.search(r'^https?://[^/]+/[^/]+/([^/]+)/?$', url)
+        book_key = url if lists is None else lists[1]
 
         book_id = self.db.getBookID(book_key)
 
@@ -398,12 +407,15 @@ class getKuma2DB:
         self.db.commit()
 
     @func_hook
-    def printinfo(self, book_key):
+    def printinfo(self, url):
         """_summary_
 
         Args:
-            url (_type_): _description_
+            url (_type_): BOOK URL
         """
+        lists = re.search(r'^https?://[^/]+/[^/]+/([^/]+)/?$', url)
+        book_key = url if lists is None else lists[1]
+
         vals = self.db.select_book(**{DB.URL: None, DB.BOOK_KEY: book_key, DB.BOOK_TYPE: None, DB.TITLE: None, DB.USE_FLAG: None})
         for val in vals:
             print(f'{val[DB.BOOK_KEY]}={val[DB.BOOK_TYPE]} {val[DB.URL]} {val[DB.TITLE]}')
@@ -423,9 +435,11 @@ def main():
         if type.upper() == 'ON' or type.upper() == 'OFF':
             # USEフラグ変更
             kuma.flagset(url, type)
-        else:
+        elif 'A' <= type.upper() and type.upper() <= 'Z':
             # テーブル登録
             kuma.addbook(url, type)
+        else:
+            logging.info('{TYPE} error'.format(TYPE=type))
         kuma.close()
 
     elif len(sys.argv) == 2:
