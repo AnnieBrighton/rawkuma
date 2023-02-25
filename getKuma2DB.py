@@ -23,6 +23,7 @@ from requests import session, exceptions
 from time import sleep
 import traceback
 import unicodedata
+from Chrome import Chrome, ChromeTab
 
 from urllib.parse import quote
 from DB import DB
@@ -101,8 +102,11 @@ class getHTTP:
    
 
 class getHTML(getHTTP):
-    def __init__(self, url) -> None:
-        self.__html = self.getHTML(url)
+    def __init__(self, url=None, text=None) -> None:
+        if url is not None:
+            self.__html = self.getHTML(url)
+        elif text is not None:
+            self.__html = etree.HTML(text)
 
     #
     def getImageList(self):
@@ -110,8 +114,7 @@ class getHTML(getHTTP):
         # <img class="ts-main-image curdown" data-index="0" src="https://kumacdn.club/images/s/spy-x-family/chapter-62-3/1-6281c0b1e24d0.jpg"
         #      data-server="Server1" onload="ts_reader_control.singleImageOnload();" onerror="ts_reader_control.imageOnError();">
         # //*[@id="readerarea"]/img[1]
-        # //*[@id="readerarea"]/img
-        return self.__html.xpath('//*[@id="readerarea"]/noscript/p/img/@src')
+        return self.__html.xpath('//*[@id="readerarea"]/img/@src')
 
     # URLリストを取得
     def getURLlist(self):
@@ -213,6 +216,7 @@ class getGooglBooks(getHTTP):
 class getKuma2DB:
     def __init__(self) -> None:
         self.db = DB(logging)
+        self.chrome = None
 
     @func_hook
     def addbook(self, url, type) -> None:
@@ -258,7 +262,7 @@ class getKuma2DB:
 
     # ダウンロード
     @func_hook
-    def updatedb2(self, val):
+    async def updatedb2(self, val):
         """ 
         """
         book_id = val[DB.BOOK_ID]
@@ -266,7 +270,12 @@ class getKuma2DB:
         url = val[DB.URL]
 
         # チャプター情報取得
-        html = getHTML(url)
+        tab = ChromeTab(self.chrome)
+        await tab.open()
+        await tab.get(val[DB.URL])
+        html = getHTML(text=await tab.getDOM())
+        await tab.close()
+
         urls = html.getURLlists()
 
         kuma_tags = html.getTAGlist()
@@ -327,7 +336,14 @@ class getKuma2DB:
             chapter_id = self.db.insert_chapter(**data)
 
             # ページ情報取得
-            html = getHTML(url[0])
+            tab = ChromeTab(self.chrome)
+            await tab.open()
+            print(url[0])
+            await tab.get(url[0])
+            await asyncio.sleep(1)
+            html = getHTML(text=await tab.getDOM())
+            await tab.close()
+
             imgurls = html.getImageList()
 
             # ページ登録情報作成
@@ -343,36 +359,32 @@ class getKuma2DB:
         return
 
     @func_hook
-    def updatedb(self) -> None:
+    async def updatedb(self) -> None:
         """ DB更新
         """
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
-            'Accept-Encoding': 'gzip',
-            'Accept-Language': 'ja,en-US;q=0.9,en;q=0.8',
-        }
-
         # DBの更新対象を、USEフラグがONで、かつ、更新日が7日より前のBOOK
         before_week = datetime.now(timezone(timedelta(hours=9), 'JST')) - timedelta(days=7)
         vals = self.db.select_book(**{DB.URL: None, DB.BOOK_KEY: None, DB.KUMA_UPDATED: before_week.date().strftime('%Y-%m-%d'), DB.TITLE: None, DB.USE_FLAG: DB.USE_FLAG_ON})
 
         newvals = []
+        self.chrome = Chrome(logging)
+        await self.chrome.start()
 
         @func_hook
         async def getHTML(val):
-            async with aiohttp.ClientSession(headers=headers) as session:
-                async with session.get(val[DB.URL]) as resp:
-                    if resp.status == 200:
-                        html = etree.HTML(await resp.text())
-                        update = datetime.strptime(html.xpath('//time[@itemprop="dateModified"]/@datetime')[0],'%Y-%m-%dT%H:%M:%S%z').astimezone(timezone(timedelta(hours=9)))
+            tab = ChromeTab(self.chrome)
+            await tab.open()
+            await tab.get(val[DB.URL])
 
-                        logging.info(f'更新日時 {val[DB.BOOK_KEY]} {update} {val[DB.KUMA_UPDATED]}')
+            html = etree.HTML(await tab.getDOM())
+            update = datetime.strptime(html.xpath('//time[@itemprop="dateModified"]/@datetime')[0],'%Y-%m-%dT%H:%M:%S%z').astimezone(timezone(timedelta(hours=9)))
 
-                        if update != val[DB.KUMA_UPDATED]:
-                            newvals.append(val)
-                    else:
-                        logging.error(f'{val[DB.URL]} is {resp.status}')
+            logging.info(f'更新日時 {val[DB.BOOK_KEY]} {update} {val[DB.KUMA_UPDATED]}')
+
+            if update != val[DB.KUMA_UPDATED]:
+                newvals.append(val)
+
+            await tab.close()
 
         @func_hook
         async def limited_parallel_call(vals, limit):
@@ -382,14 +394,17 @@ class getKuma2DB:
                 async with sem:
                     return await getHTML(val)
 
-            return await asyncio.gather(*[call(val) for val in vals])
+            await asyncio.gather(*[call(val) for val in vals])
 
-        asyncio.run(limited_parallel_call(vals, 20))
+        await limited_parallel_call(vals, 10)
 
         for val in newvals:
             logging.info(f'新規更新 {val[DB.BOOK_KEY]}')
-            self.updatedb2(val)
+            await self.updatedb2(val)
 
+        await asyncio.sleep(10)
+
+        await self.chrome.stop()
 
     def get_id(self, url) -> str:
         lists = re.search(r'^https?://[^/]+/[^/]+/([^/]+)/?$', url)
@@ -495,7 +510,7 @@ def main():
     elif len(sys.argv) == 1:
         # DB更新実行
         kuma = getKuma2DB()
-        kuma.updatedb()
+        asyncio.run(kuma.updatedb())
         kuma.close()
 
     else:
