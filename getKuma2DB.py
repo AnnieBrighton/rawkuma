@@ -270,6 +270,7 @@ class getKuma2DB:
         url = val[DB.URL]
 
         # チャプター情報取得
+        logging.info('get book info {URL}'.format(URL=val[DB.URL]))
         tab = ChromeTab(self.chrome)
         await tab.open()
         await tab.get(val[DB.URL])
@@ -311,6 +312,7 @@ class getKuma2DB:
 
         self.db.update_book(book_id, **data)
 
+        page_vals = []
         for url in urls:
             # ファイルを展開するパスを作成 (最後に / を含む)
             list = re.search(r'^https?://[^/]+/[^/]+-chapter-([0-9]+)-([0-9]+)/$', url[0])
@@ -335,11 +337,15 @@ class getKuma2DB:
                     DB.CHAPTER_DATE: url[2]}
             chapter_id = self.db.insert_chapter(**data)
 
+            page_vals.append({DB.CHAPTER_ID: chapter_id, DB.CHAPTER_URL: url[0]})
+
+        @func_hook
+        async def getChapterHTML(val):
             # ページ情報取得
+            logging.info('get chapter info {URL}'.format(URL=val[DB.CHAPTER_URL]))
             tab = ChromeTab(self.chrome)
             await tab.open()
-            print(url[0])
-            await tab.get(url[0])
+            await tab.get(val[DB.CHAPTER_URL])
             await asyncio.sleep(1)
             html = getHTML(text=await tab.getDOM())
             await tab.close()
@@ -349,10 +355,22 @@ class getKuma2DB:
             # ページ登録情報作成
             pagelists = []
             for page, page_url in enumerate(imgurls):
-                pagelists.append((chapter_id, page_url, page + 1))
+                pagelists.append((val[DB.CHAPTER_ID], page_url, page + 1))
 
             # ページレコード作成
             self.db.insert_page(pagelists)
+
+        @func_hook
+        async def limited_parallel_call(vals, limit):
+            sem = asyncio.Semaphore(limit)
+
+            async def call(val):
+                async with sem:
+                    return await getChapterHTML(val)
+
+            await asyncio.gather(*[call(val) for val in vals])
+
+        await limited_parallel_call(page_vals, 10)
 
         self.db.commit()
 
