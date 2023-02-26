@@ -14,6 +14,8 @@ console.setFormatter(logging.Formatter('%(asctime)s %(threadName)s: %(message)s'
 logging.getLogger('').addHandler(console)
 
 class MkKuma2Html:
+    BASE_PATH = 'Books'
+
     def __init__(self) -> None:
         self.db = DB(logging)        
         self.path = os.path.abspath(os.path.dirname(sys.argv[0]))
@@ -24,6 +26,9 @@ class MkKuma2Html:
         """
         lists = self.db.select_book(**{DB.BOOK_TYPE: None})
         types = sorted(set([ val[DB.BOOK_TYPE] for val in lists ]))
+
+        # ベースディレクトリ作成
+        os.makedirs(self.BASE_PATH, exist_ok=True)
 
         # タイプリストHTML出力
         self.output_book(types)
@@ -37,8 +42,7 @@ class MkKuma2Html:
             for book in books:
                 chapters = self.db.select_chapter(book[DB.BOOK_ID])
 
-                path = os.path.join('img{TYPE}'.format(TYPE=book[DB.BOOK_TYPE]), book[DB.BOOK_KEY])
-                # print(os.path.join(path, book[DB.BOOK_KEY] + '.html'))
+                path = os.path.join(self.BASE_PATH, 'img{TYPE}'.format(TYPE=book[DB.BOOK_TYPE]), book[DB.BOOK_KEY])
 
                 # チャプター格納ディレクトリ作成
                 os.makedirs(path, exist_ok=True)
@@ -59,7 +63,7 @@ class MkKuma2Html:
         tmpl = self.lookup.get_template("Books.html")
         data = {'types': [type for type in types]}
  
-        with open('Books.html', mode='w') as f:
+        with open(os.path.join(self.BASE_PATH, 'Books.html'), mode='w') as f:
             f.write(tmpl.render(**data))
 
 
@@ -84,7 +88,7 @@ class MkKuma2Html:
                 ]
             }
 
-        with open('Books{TYPE}.html'.format(TYPE=type), mode='w') as f:
+        with open(os.path.join(self.BASE_PATH, 'Books{TYPE}.html'.format(TYPE=type)), mode='w') as f:
             f.write(tmpl.render(**data))
 
 
