@@ -88,12 +88,6 @@ class getHTTP:
 
         return None
 
-    # HTMLリストを取得
-    def getHTML(self, url):
-        # 取得HTMLパース
-        return etree.HTML(self.__getHTTP(url).text)
-
-
     # JSONを取得
     def getJSON(self, url):
         # 取得HTMLパース
@@ -101,12 +95,9 @@ class getHTTP:
 
    
 
-class getHTML(getHTTP):
-    def __init__(self, url=None, text=None) -> None:
-        if url is not None:
-            self.__html = self.getHTML(url)
-        elif text is not None:
-            self.__html = etree.HTML(text)
+class rawkumaHTML():
+    def __init__(self, text=None) -> None:
+        self.__html = etree.HTML(text)
 
     #
     def getImageList(self):
@@ -262,6 +253,17 @@ class getKuma2DB:
     def close(self) -> None:
         self.db.close()
 
+
+    @func_hook
+    async def getTEXT4HTML(self, url) -> str:
+        tab = ChromeTab(self.chrome)
+        await tab.open()
+        await tab.get(url)
+        text = await tab.getDOM()
+        await tab.close()
+        return text
+
+
     # ダウンロード
     @func_hook
     async def updatedb2(self, val):
@@ -273,11 +275,7 @@ class getKuma2DB:
 
         # チャプター情報取得
         logging.info('get book info {URL}'.format(URL=val[DB.URL]))
-        tab = ChromeTab(self.chrome)
-        await tab.open()
-        await tab.get(val[DB.URL])
-        html = getHTML(text=await tab.getDOM())
-        await tab.close()
+        html = rawkumaHTML(await self.getTEXT4HTML(val[DB.URL]))
 
         urls = html.getURLlists()
 
@@ -345,12 +343,7 @@ class getKuma2DB:
         async def getChapterHTML(val):
             # ページ情報取得
             logging.info('get chapter info {URL}'.format(URL=val[DB.CHAPTER_URL]))
-            tab = ChromeTab(self.chrome)
-            await tab.open()
-            await tab.get(val[DB.CHAPTER_URL])
-            await asyncio.sleep(1)
-            html = getHTML(text=await tab.getDOM())
-            await tab.close()
+            html = rawkumaHTML(await self.getTEXT4HTML(val[DB.CHAPTER_URL]))
 
             imgurls = html.getImageList()
 
@@ -362,17 +355,13 @@ class getKuma2DB:
             # ページレコード作成
             self.db.insert_page(pagelists)
 
-        @func_hook
-        async def limited_parallel_call(vals, limit):
-            sem = asyncio.Semaphore(limit)
+        sem = asyncio.Semaphore(10)
 
-            async def call(val):
-                async with sem:
-                    return await getChapterHTML(val)
+        async def call(val):
+            async with sem:
+                return await getChapterHTML(val)
 
-            await asyncio.gather(*[call(val) for val in vals])
-
-        await limited_parallel_call(page_vals, 10)
+        await asyncio.gather(*[call(val) for val in page_vals])
 
         self.db.commit()
 
@@ -392,31 +381,23 @@ class getKuma2DB:
 
         @func_hook
         async def getHTML(val):
-            tab = ChromeTab(self.chrome)
-            await tab.open()
-            await tab.get(val[DB.URL])
+            html = etree.HTML(await self.getTEXT4HTML(val[DB.URL]))
 
-            html = etree.HTML(await tab.getDOM())
             update = datetime.strptime(html.xpath('//time[@itemprop="dateModified"]/@datetime')[0],'%Y-%m-%dT%H:%M:%S%z').astimezone(timezone(timedelta(hours=9)))
-
             logging.info(f'更新日時 {val[DB.BOOK_KEY]} {update} {val[DB.KUMA_UPDATED]}')
 
+            # DBの更新日時とチャプターページの更新日時が異なるブックを更新対象に追加
             if update != val[DB.KUMA_UPDATED]:
                 newvals.append(val)
 
-            await tab.close()
 
-        @func_hook
-        async def limited_parallel_call(vals, limit):
-            sem = asyncio.Semaphore(limit)
+        sem = asyncio.Semaphore(10)
 
-            async def call(val):
-                async with sem:
-                    return await getHTML(val)
+        async def call(val):
+            async with sem:
+                return await getHTML(val)
 
-            await asyncio.gather(*[call(val) for val in vals])
-
-        await limited_parallel_call(vals, 10)
+        await asyncio.gather(*[call(val) for val in vals])
 
         for val in newvals:
             logging.info(f'新規更新 {val[DB.BOOK_KEY]}')
@@ -464,8 +445,8 @@ class getKuma2DB:
             url (_type_): BOOK URL
         """
         book_key = self.get_id(url)
-
         vals = self.db.select_book(**{DB.URL: None, DB.BOOK_ID: None, DB.BOOK_KEY: book_key})
+
         for val in vals:
             self.db.delete_chapter(val[DB.BOOK_ID])
         self.db.commit()
@@ -494,13 +475,38 @@ class getKuma2DB:
             val[DB.KUMA_UPDATED] = '1900-01-01 00:00:00+09:00'
             self.updatedb2(val)
 
+    @func_hook
+    def update_title(self, url, title) -> None:
+        """TITLE情報更新
+        Args:
+            url (_type_): BOOK URL
+        """
+        book_id = self.db.getBookID(self.get_id(url))
+
+        self.db.update_book(book_id, **{DB.TITLE: title})
+
+        self.db.commit()
+
+
+
 #
 # メイン
 #
 
 @func_hook
 def main():
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 1:
+        # DB更新実行
+        kuma = getKuma2DB()
+        asyncio.run(kuma.updatedb())
+        kuma.close()
+
+    elif len(sys.argv) == 2:
+        kuma = getKuma2DB()
+        kuma.printinfo(sys.argv[1])
+        kuma.close()
+
+    elif len(sys.argv) >= 3:
         url = sys.argv[1]
         type = sys.argv[2]
         logging.info('URL={URL}, TYPE={TYPE}'.format(URL=url, TYPE=type))
@@ -518,23 +524,11 @@ def main():
             kuma.delete(url)
         elif type.upper() == 'UPDATE':
             kuma.update(url)
+        elif type.upper() == 'TITLE' and len(sys.argv) == 4:
+            kuma.update_title(url, sys.argv[3])
         else:
             logging.info('{TYPE} error'.format(TYPE=type))
         kuma.close()
-
-    elif len(sys.argv) == 2:
-        kuma = getKuma2DB()
-        kuma.printinfo(sys.argv[1])
-        kuma.close()
-
-    elif len(sys.argv) == 1:
-        # DB更新実行
-        kuma = getKuma2DB()
-        asyncio.run(kuma.updatedb())
-        kuma.close()
-
-    else:
-        logging.info('引数誤り')
 
 if __name__ == '__main__':
     main()
