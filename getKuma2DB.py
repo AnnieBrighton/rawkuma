@@ -206,6 +206,7 @@ class getGooglBooks(getHTTP):
 
 class getKuma2DB:
     BASE_PATH = 'Books'
+    LIMITS = 15
 
     def __init__(self) -> None:
         self.db = DB(logging)
@@ -355,7 +356,7 @@ class getKuma2DB:
             # ページレコード作成
             self.db.insert_page(pagelists)
 
-        sem = asyncio.Semaphore(10)
+        sem = asyncio.Semaphore(self.LIMITS)
 
         async def call(val):
             async with sem:
@@ -391,7 +392,7 @@ class getKuma2DB:
                 newvals.append(val)
 
 
-        sem = asyncio.Semaphore(10)
+        sem = asyncio.Semaphore(self.LIMITS)
 
         async def call(val):
             async with sem:

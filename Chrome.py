@@ -31,6 +31,7 @@ class Chrome():
             pass
 
         opt = [self.chrome_app]
+        opt.append('--headless=new')
         opt.append('--user-data-dir=' + self.user_dir)
         #opt.append('--window-size=800,600')
         opt.append('--window-size=1600,200')
