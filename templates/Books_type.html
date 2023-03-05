@@ -162,7 +162,11 @@ a img {
                 <tr>
                     % for type in types:
                     <th>
-                        <a href="Books${type}.html">分類${type}</a>
+                        % if cur_type == type:
+                        <a > 分類${type} </a>
+                        % else:
+                        <a href="Books${type}.html"> 分類${type} </a>
+                        % endif
                     </th>
                     % endfor
                 </tr>

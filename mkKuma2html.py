@@ -79,6 +79,7 @@ class MkKuma2Html:
         tmpl = self.lookup.get_template("Books_type.html")
 
         data = {'types': [type for type in types],
+                'cur_type': type,
                 'books': [
                     {'HREF': os.path.join('img{TYPE}'.format(TYPE=book[DB.BOOK_TYPE]), book[DB.BOOK_KEY], book[DB.BOOK_KEY] + ".html"),
                      'SRC': book[DB.THUMB],
