@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 #
-# https://rawkuma.com/manga/${URL} より以下の情報を取得 
+# https://rawkuma.com/manga/${URL} より以下の情報を取得
 #
 # - URL
 # - タイトル
 # - 著者
 # - チャプタ番号(nnnn.n)
-# - 
+# -
 # - Posted On
 # - Updated On
 
@@ -34,6 +34,8 @@ console.setFormatter(logging.Formatter('%(asctime)s %(threadName)s: %(message)s'
 logging.getLogger('').addHandler(console)
 
 #
+
+
 def func_hook(func):
     def wrapper(*arg, **kwargs):
         logging.info('call %s' % (func.__name__))
@@ -41,6 +43,7 @@ def func_hook(func):
         logging.info('return %s' % (func.__name__))
         return ret
     return wrapper
+
 
 class getHTTP:
     # HTMLリストを取得
@@ -93,7 +96,6 @@ class getHTTP:
         # 取得HTMLパース
         return self.__getHTTP(url).json()
 
-   
 
 class rawkumaHTML():
     def __init__(self, text=None) -> None:
@@ -120,7 +122,7 @@ class rawkumaHTML():
         # //*[@id="chapterlist"]/ul/li/div/div[1]/a
         # //*[@id="chapterlist"]/ul/li/div/div[@class="eph-num"]/a
         lists = self.__html.xpath('//*[@id="chapterlist"]/ul/li/div/div[@class="eph-num"]')
-        
+
         vals = []
         for list in lists:
             href = list.xpath('./a/@href')
@@ -145,14 +147,14 @@ class rawkumaHTML():
         # Artist
         lists = self.__html.xpath('//div[@class="fmed" and b/text()="Artist"]/span/text()')
         titles = str(lists[0]).split(',') if len(lists) > 0 else []
-        return [ val.strip() for val in titles ]
+        return [val.strip() for val in titles]
 
     # Titleを取得
     def getTitle(self):
         # Alternative Titles
         lists = self.__html.xpath('//div[@class="wd-full" and b/text()="Alternative Titles"]/span/text()')
         titles = str(lists[0]).split(',') if len(lists) > 0 else []
-        return [ val.strip() for val in titles ]
+        return [val.strip() for val in titles]
 
     def getDescription(self):
         # Synopsis Strategic Lovers
@@ -162,16 +164,18 @@ class rawkumaHTML():
     # 登録時刻を取得
     def getPostedOn(self):
         # Posted On
-        return datetime.strptime(self.__html.xpath('//time[@itemprop="datePublished"]/@datetime')[0],'%Y-%m-%dT%H:%M:%S%z').astimezone(timezone(timedelta(hours=9)))
+        return datetime.strptime(self.__html.xpath('//time[@itemprop="datePublished"]/@datetime')[0],
+                                 '%Y-%m-%dT%H:%M:%S%z').astimezone(timezone(timedelta(hours=9)))
 
     # 更新時刻を取得
     def getUpdatedOn(self):
         # Updated On
-        return datetime.strptime(self.__html.xpath('//time[@itemprop="dateModified"]/@datetime')[0],'%Y-%m-%dT%H:%M:%S%z').astimezone(timezone(timedelta(hours=9)))
+        return datetime.strptime(self.__html.xpath('//time[@itemprop="dateModified"]/@datetime')[0],
+                                 '%Y-%m-%dT%H:%M:%S%z').astimezone(timezone(timedelta(hours=9)))
 
     def getThumbnail(self):
         return self.__html.xpath('//div[@class="thumbook"]/div[@class="thumb"]/img/@src')[0]
-        
+
 
 class getGooglBooks(getHTTP):
     def __init__(self) -> None:
@@ -203,7 +207,6 @@ class getGooglBooks(getHTTP):
         return t, a
 
 
-
 class getKuma2DB:
     BASE_PATH = 'Books'
     LIMITS = 15
@@ -229,7 +232,8 @@ class getKuma2DB:
         logging.info(result)
 
         if len(result) == 0:
-            self.db.insert_book(**{DB.BOOK_KEY: book_key, DB.URL: url, DB.BOOK_TYPE: type.upper(), DB.USE_FLAG: DB.USE_FLAG_ON, DB.KUMA_UPDATED: '1900-01-01 00:00:00+09:00'})
+            self.db.insert_book(**{DB.BOOK_KEY: book_key, DB.URL: url, DB.BOOK_TYPE: type.upper(),
+                                DB.USE_FLAG: DB.USE_FLAG_ON, DB.KUMA_UPDATED: '1900-01-01 00:00:00+09:00'})
             self.db.commit()
         else:
             if result[0][DB.BOOK_TYPE] != type.upper():
@@ -240,7 +244,7 @@ class getKuma2DB:
                 # チャプター格納ディレクトリ作成
                 os.makedirs(os.path.join(self.BASE_PATH, 'img{TYPE}'.format(TYPE=type.upper())), exist_ok=True)
 
-                # 
+                #
                 olddir = os.path.join(self.BASE_PATH, 'img{TYPE}'.format(TYPE=result[0][DB.BOOK_TYPE]), result[0][DB.BOOK_KEY])
                 if os.path.isdir(olddir):
                     newdir = os.path.join(self.BASE_PATH, 'img{TYPE}'.format(TYPE=type.upper()), result[0][DB.BOOK_KEY])
@@ -254,7 +258,6 @@ class getKuma2DB:
     def close(self) -> None:
         self.db.close()
 
-
     @func_hook
     async def getTEXT4HTML(self, url) -> str:
         tab = ChromeTab(self.chrome)
@@ -264,8 +267,8 @@ class getKuma2DB:
         await tab.close()
         return text
 
-
     # ダウンロード
+
     @func_hook
     async def updatedb2(self, val):
         """ 
@@ -374,7 +377,10 @@ class getKuma2DB:
         """
         # DBの更新対象を、USEフラグがONで、かつ、更新日が7日より前のBOOK
         before_week = datetime.now(timezone(timedelta(hours=9), 'JST')) - timedelta(days=7)
-        vals = self.db.select_book(**{DB.URL: None, DB.BOOK_KEY: None, DB.KUMA_UPDATED: before_week.date().strftime('%Y-%m-%d'), DB.TITLE: None, DB.USE_FLAG: DB.USE_FLAG_ON})
+        vals = self.db.select_book(
+            **
+            {DB.URL: None, DB.BOOK_KEY: None, DB.KUMA_UPDATED: before_week.date().strftime('%Y-%m-%d'),
+             DB.TITLE: None, DB.USE_FLAG: DB.USE_FLAG_ON})
 
         newvals = []
         self.chrome = Chrome(logging)
@@ -384,13 +390,13 @@ class getKuma2DB:
         async def getHTML(val):
             html = etree.HTML(await self.getTEXT4HTML(val[DB.URL]))
 
-            update = datetime.strptime(html.xpath('//time[@itemprop="dateModified"]/@datetime')[0],'%Y-%m-%dT%H:%M:%S%z').astimezone(timezone(timedelta(hours=9)))
+            update = datetime.strptime(html.xpath('//time[@itemprop="dateModified"]/@datetime')
+                                       [0], '%Y-%m-%dT%H:%M:%S%z').astimezone(timezone(timedelta(hours=9)))
             logging.info(f'更新日時 {val[DB.BOOK_KEY]} {update} {val[DB.KUMA_UPDATED]}')
 
             # DBの更新日時とチャプターページの更新日時が異なるブックを更新対象に追加
             if update != val[DB.KUMA_UPDATED]:
                 newvals.append(val)
-
 
         sem = asyncio.Semaphore(self.LIMITS)
 
@@ -463,7 +469,7 @@ class getKuma2DB:
         self.db.commit()
 
     @func_hook
-    def update(self, url) -> None:
+    async def update(self, url) -> None:
         """BOOK情報更新
         Args:
             url (_type_): BOOK URL
@@ -471,10 +477,16 @@ class getKuma2DB:
         book_key = self.get_id(url)
         vals = self.db.select_book(**{DB.URL: None, DB.BOOK_KEY: book_key, DB.KUMA_UPDATED: None, DB.TITLE: None, DB.USE_FLAG: None})
 
+        self.chrome = Chrome(logging)
+        await self.chrome.start()
+
         for val in vals:
             logging.info(f'新規更新 {val[DB.BOOK_ID]} {val[DB.BOOK_KEY]}')
             val[DB.KUMA_UPDATED] = '1900-01-01 00:00:00+09:00'
-            self.updatedb2(val)
+            await self.updatedb2(val)
+
+        await asyncio.sleep(10)
+        await self.chrome.stop()
 
     @func_hook
     def update_title(self, url, title) -> None:
@@ -487,7 +499,6 @@ class getKuma2DB:
         self.db.update_book(book_id, **{DB.TITLE: title})
 
         self.db.commit()
-
 
 
 #
@@ -524,12 +535,13 @@ def main():
         elif type.upper() == 'DELETE':
             kuma.delete(url)
         elif type.upper() == 'UPDATE':
-            kuma.update(url)
+            asyncio.run(kuma.update(url))
         elif type.upper() == 'TITLE' and len(sys.argv) == 4:
             kuma.update_title(url, sys.argv[3])
         else:
             logging.info('{TYPE} error'.format(TYPE=type))
         kuma.close()
+
 
 if __name__ == '__main__':
     main()
