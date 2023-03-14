@@ -3,8 +3,129 @@
         <meta charset="utf-8">
         <meta name="referrer" content="no-referrer">
         <style>
-    <%include file="header_style.css" />
-        </style>
+body {
+    display: inline;
+}
+
+.HeaderPage {
+    position: sticky;
+    /* ヘッダーを固定する */
+    top: 0;
+    /* 上部から配置の基準位置を決める */
+    left: 0;
+    /* 左から配置の基準位置を決める */
+    width: 100%;
+    /* ヘッダーの横幅を指定する */
+    /* height: 15px; */
+    /* ヘッダーの高さを指定する */
+    padding: 2px;
+    /* ヘッダーの余白を指定する(上下左右) */
+    background-color: #31a9ee;
+    /* ヘッダーの背景色を指定する */
+    color: #000000;
+    /* フォントの色を指定する */
+    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
+    display: flex;
+    font-size: 24px;
+}
+
+.ChapterHeader {
+    /*左固定記述*/
+    position: -webkit-sticky;
+    /*Safari用*/
+    position: sticky;
+    /* ヘッダーを固定する */
+    top: 0;
+    /* 上部から配置の基準位置を決める */
+    left: 0;
+    /* 左から配置の基準位置を決める */
+    width: 47%;
+    /* ヘッダーの横幅を指定する */
+    height: 100%;
+    /* ヘッダーの高さを指定する */
+    padding: 10px;
+    /* ヘッダーの余白を指定する(上下左右) */
+    background-color: #31a9ee;
+    /* ヘッダーの背景色を指定する */
+    color: #000000;
+    /* フォントの色を指定する */
+    float: left;
+}
+
+.Contents {
+    width: 100%;
+    display: flex;
+    flex-direction: row-reverse;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.Contents>div {
+    display: flex;
+    width: 100%;
+    height: auto;
+    flex-wrap: wrap;
+    flex-direction: row-reverse;
+    justify-content: center;
+}
+
+.Contents>div>img {
+    width: auto;
+    height: 95vh;
+    margin-top: 2vh;
+    margin-bottom: 2vh;
+}
+
+@media screen and (max-width: 1024px) and (orientation: portrait) {
+    .Contents{
+        display: block;
+        width: 100%;
+        display:flex;
+    }
+    .Contents>div{
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+    .Contents>div>img{
+        margin-top: 0;
+        margin-bottom: 0;
+        width: auto;
+        height: 95vh;
+        display: block;
+        margin:auto;
+    }
+}
+
+div.title {
+    white-space: nowrap;
+    /* 横幅のMAXに達しても改行しない */
+    overflow: hidden;
+    /* ハミ出した部分を隠す */
+    text-overflow: ellipsis;
+    /* 「…」と省略 */
+    -webkit-text-overflow: ellipsis;
+    /* Safari */
+    -o-text-overflow: ellipsis;
+    /* Opera */
+    font-size: 14px;
+    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
+}
+
+div.Next {
+    width: 20%;
+    font-size: 24px;
+    font-size: 14px;
+    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
+}
+
+div.Prev {
+    width: 20%;
+    font-size: 24px;
+    font-size: 14px;
+    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
+}
+       </style>
     </head>
     <body>
         <div class="HeaderPage">
@@ -37,6 +158,7 @@
             </div>
         </div>
         <div id="content" class="Contents">
+            <div>
             % for i, page in enumerate(pages):
             % if i > 2:
             <img loading="lazy" class="noContextMenu" src="${page}">
@@ -44,6 +166,7 @@
             <img class="noContextMenu" src="${page}">
             % endif
             % endfor
+            </div>
         </div>
         <div class="Footer">
             <a href="${next["HREF"]}">${next["NUM"]}</a>
