@@ -138,10 +138,10 @@ a img {
     -webkit-line-clamp: 2;
 }
 
-.Completed {
+.UpdateStatus {
     position: absolute;
     top: 18px;
-    left: -25px;
+    left: -20px;
     line-height: normal;
     color: #fff;
     text-transform: uppercase;
@@ -180,7 +180,9 @@ a img {
                         <a href="${book["HREF"]}">
                             <div class="limit">
                                 % if book["FLAG"] == 0:
-                                <span class="Completed">Completed</span>
+                                <span class="UpdateStatus">Completed</span>
+                                % elif book["FLAG"] == 2:
+                                <span class="UpdateStatus">&nbsp;&nbsp;Stoped&nbsp;&nbsp;&nbsp;</span>
                                 % endif
                                 <img src="${book["SRC"]}" width="200" height="auto">
                             </div>

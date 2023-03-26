@@ -3,13 +3,15 @@
 from datetime import datetime, timedelta, timezone
 import sqlite3
 
+
 class DB:
     BOOK_ID = 'book_id'
     BOOK_KEY = 'book_key'
     BOOK_TYPE = 'book_type'
     USE_FLAG = 'use_flag'
-    USE_FLAG_ON = 1
-    USE_FLAG_OFF = 0
+    USE_FLAG_STOPED = 2     # 更新中止
+    USE_FLAG_UPDATE = 1     # 更新中
+    USE_FLAG_COMPLETED = 0  # 完了
     URL = 'url'
     THUMB = 'thumb'
     TITLE = 'title'
@@ -82,10 +84,10 @@ class DB:
 
     def insert_book(self, **kwargs) -> int:
         book_id = self.getBookID(kwargs[DB.BOOK_KEY])
-    
+
         if book_id is not None:
             return book_id
-    
+
         cur = self.conn.cursor()
         cur.executemany('''
             insert into {TABLE} (
@@ -122,11 +124,10 @@ class DB:
         cur.execute('select last_insert_rowid() from {TABLE}'.format(TABLE=self.book_name_table))
         for row in cur.fetchall():
             cur.close()
-            return row[0] # 取得したbook_idを返す
+            return row[0]  # 取得したbook_idを返す
 
         cur.close()
         return None
-
 
     def update_book(self, book_id, **kwargs) -> None:
         cur = self.conn.cursor()
@@ -229,15 +230,16 @@ class DB:
             val.update({DB.KUMA_DESCRIPTION: l.pop(0)}) if DB.KUMA_DESCRIPTION in kwargs else ""
             if DB.KUMA_POSTED in kwargs:
                 v = l.pop(0)
-                val.update({DB.KUMA_POSTED: datetime.strptime(v,'%Y-%m-%d %H:%M:%S%z').astimezone(timezone(timedelta(hours=9))) if v is not None else None})
+                val.update({DB.KUMA_POSTED: datetime.strptime(
+                    v, '%Y-%m-%d %H:%M:%S%z').astimezone(timezone(timedelta(hours=9))) if v is not None else None})
             if DB.KUMA_UPDATED in kwargs:
                 v = l.pop(0)
-                val.update({DB.KUMA_UPDATED: datetime.strptime(v,'%Y-%m-%d %H:%M:%S%z').astimezone(timezone(timedelta(hours=9))) if v is not None else None})
+                val.update({DB.KUMA_UPDATED: datetime.strptime(
+                    v, '%Y-%m-%d %H:%M:%S%z').astimezone(timezone(timedelta(hours=9))) if v is not None else None})
             vals.append(val)
 
         cur.close()
         return vals
-        
 
     def getBookID(self, book_key) -> int:
         cur = self.conn.cursor()
@@ -245,7 +247,7 @@ class DB:
 
         for row in cur.fetchall():
             cur.close()
-            return row[0] # 取得したbook_idを返す
+            return row[0]  # 取得したbook_idを返す
 
         cur.close()
         return None
@@ -266,7 +268,6 @@ class DB:
 
         cur.execute('delete from {TABLE} where book_key = ?'.format(TABLE=self.book_name_table), (book_key,))
         cur.close()
-
 
     def __create_table_chapter(self) -> None:
         self.conn.execute('''
@@ -296,7 +297,7 @@ class DB:
 
         for row in cur.fetchall():
             cur.close()
-            return row[0] # 取得したchapter_idを返す
+            return row[0]  # 取得したchapter_idを返す
 
         cur.executemany('''
             insert into {TABLE} (
@@ -317,11 +318,10 @@ class DB:
         rows = cur.execute('select last_insert_rowid() from {TABLE}'.format(TABLE=self.chapter_name_table))
         for row in rows:
             cur.close()
-            return row[0] # 取得したchapter_idを返す
+            return row[0]  # 取得したchapter_idを返す
 
         cur.close()
         return None
-
 
     def check_chapter(self, book_id, chapter_key) -> bool:
         cur = self.conn.cursor()
@@ -337,20 +337,20 @@ class DB:
         cur.execute('''
             select chapter_id, chapter_key, chapter_url, chapter_num, chapter_date from {TABLE} where book_id = ? order by chapter_key
         '''.format(TABLE=self.chapter_name_table), (book_id,))
-    
+
         lists = [{DB.CHAPTER_ID: val[0],
                   DB.CHAPTER_KEY: val[1],
                   DB.CHAPTER_URL: val[2],
                   DB.CHAPTER_NUM: val[3],
                   DB.CHAPTER_DATE: datetime.strptime(val[4], '%Y-%m-%d %H:%M:%S') if val[4] is not None else None
-                 } for val in cur.fetchall() ]
+                  } for val in cur.fetchall()]
         cur.close()
         return lists
 
     def delete_chapter(self, book_id) -> None:
         cur = self.conn.cursor()
         cur.execute('select chapter_id from {TABLE} where book_id = ?'.format(TABLE=self.chapter_name_table), (book_id,))
-    
+
         for val in cur.fetchall():
             self.delete_page(val[0])
 
@@ -360,7 +360,6 @@ class DB:
         self.__logging.info(tuple(value))
         cur.execute(sql, tuple(value))
         cur.close()
-
 
     def __create_table_page(self) -> None:
         self.conn.execute('''
@@ -393,7 +392,7 @@ class DB:
             select page_id, page, page_url from {TABLE} where chapter_id = ? order by page
         '''.format(TABLE=self.page_name_table), (chapter_id,))
 
-        lists = [ {DB.PAGE_ID: val[0], DB.PAGE: val[1], DB.PAGE_URL: val[2]} for val in cur.fetchall() ]
+        lists = [{DB.PAGE_ID: val[0], DB.PAGE: val[1], DB.PAGE_URL: val[2]} for val in cur.fetchall()]
         cur.close()
         return lists
 

@@ -233,7 +233,7 @@ class getKuma2DB:
 
         if len(result) == 0:
             self.db.insert_book(**{DB.BOOK_KEY: book_key, DB.URL: url, DB.BOOK_TYPE: type.upper(),
-                                DB.USE_FLAG: DB.USE_FLAG_ON, DB.KUMA_UPDATED: '1900-01-01 00:00:00+09:00'})
+                                DB.USE_FLAG: DB.USE_FLAG_UPDATE, DB.KUMA_UPDATED: '1900-01-01 00:00:00+09:00'})
             self.db.commit()
         else:
             if result[0][DB.BOOK_TYPE] != type.upper():
@@ -380,7 +380,7 @@ class getKuma2DB:
         vals = self.db.select_book(
             **
             {DB.URL: None, DB.BOOK_KEY: None, DB.KUMA_UPDATED: before_week.date().strftime('%Y-%m-%d'),
-             DB.TITLE: None, DB.USE_FLAG: DB.USE_FLAG_ON})
+             DB.TITLE: None, DB.USE_FLAG: DB.USE_FLAG_UPDATE})
 
         newvals = []
         self.chrome = Chrome(logging)
@@ -429,7 +429,16 @@ class getKuma2DB:
         book_key = self.get_id(url)
         book_id = self.db.getBookID(book_key)
 
-        self.db.update_book(book_id, **{DB.USE_FLAG: DB.USE_FLAG_ON if type.upper() == 'ON' else DB.USE_FLAG_OFF})
+        if type.upper() == 'ON':
+            flag = DB.USE_FLAG_UPDATE
+        elif type.upper() == 'OFF':
+            flag = DB.USE_FLAG_COMPLETED
+        elif type.upper() == 'STOP':
+            flag = DB.USE_FLAG_STOPED
+        else:
+            return
+
+        self.db.update_book(book_id, **{DB.USE_FLAG: flag})
 
         self.db.commit()
 
@@ -524,7 +533,7 @@ def main():
         logging.info('URL={URL}, TYPE={TYPE}'.format(URL=url, TYPE=type))
 
         kuma = getKuma2DB()
-        if type.upper() == 'ON' or type.upper() == 'OFF':
+        if type.upper() == 'ON' or type.upper() == 'OFF' or type.upper() == 'STOP':
             # USEフラグ変更
             kuma.flagset(url, type)
         elif len(type) == 1 and 'A' <= type[0].upper() and type[0].upper() <= 'Z':
