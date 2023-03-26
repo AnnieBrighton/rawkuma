@@ -58,6 +58,7 @@ body {
     flex-direction: row-reverse;
     flex-wrap: wrap;
     justify-content: center;
+    pointer-events: none;
 }
 
 .Contents>div {
@@ -67,6 +68,7 @@ body {
     flex-wrap: wrap;
     flex-direction: row-reverse;
     justify-content: center;
+    pointer-events: none;
 }
 
 .Contents>div>img {
@@ -74,6 +76,7 @@ body {
     height: 95vh;
     margin-top: 2vh;
     margin-bottom: 2vh;
+    pointer-events: none;
 }
 
 @media screen and (max-width: 1024px) and (orientation: portrait) {
@@ -81,11 +84,13 @@ body {
         display: block;
         width: 100%;
         display:flex;
+        pointer-events: none;
     }
     .Contents>div{
         display: block;
         width: 100%;
         height: 100%;
+        pointer-events: none;
     }
     .Contents>div>img{
         margin-top: 0;
@@ -94,6 +99,7 @@ body {
         height: 95vh;
         display: block;
         margin:auto;
+        pointer-events: none;
     }
 }
 
