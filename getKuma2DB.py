@@ -209,6 +209,7 @@ class getGooglBooks(getHTTP):
 
 class getKuma2DB:
     BASE_PATH = 'Books'
+    ADDBOOK_DATE = '1900-01-01 00:00:00+09:00'
     LIMITS = 15
 
     def __init__(self) -> None:
@@ -233,7 +234,7 @@ class getKuma2DB:
 
         if len(result) == 0:
             self.db.insert_book(**{DB.BOOK_KEY: book_key, DB.URL: url, DB.BOOK_TYPE: type.upper(),
-                                DB.USE_FLAG: DB.USE_FLAG_UPDATE, DB.KUMA_UPDATED: '1900-01-01 00:00:00+09:00'})
+                                DB.USE_FLAG: DB.USE_FLAG_UPDATE, DB.KUMA_UPDATED: self.ADDBOOK_DATE})
             self.db.commit()
         else:
             if result[0][DB.BOOK_TYPE] != type.upper():
@@ -371,20 +372,8 @@ class getKuma2DB:
 
         return
 
-    @func_hook
-    async def updatedb(self) -> None:
-        """ DB更新
-        """
-        # DBの更新対象を、USEフラグがONで、かつ、更新日が7日より前のBOOK
-        before_week = datetime.now(timezone(timedelta(hours=9), 'JST')) - timedelta(days=7)
-        vals = self.db.select_book(
-            **
-            {DB.URL: None, DB.BOOK_KEY: None, DB.KUMA_UPDATED: before_week.date().strftime('%Y-%m-%d'),
-             DB.TITLE: None, DB.USE_FLAG: DB.USE_FLAG_UPDATE})
-
+    async def download(self, vals) -> None:
         newvals = []
-        self.chrome = Chrome(logging)
-        await self.chrome.start()
 
         @func_hook
         async def getHTML(val):
@@ -409,6 +398,62 @@ class getKuma2DB:
         for val in newvals:
             logging.info(f'新規更新 {val[DB.BOOK_KEY]}')
             await self.updatedb2(val)
+
+    @func_hook
+    async def updatedb(self) -> None:
+        """ DB更新
+        """
+        # DBの更新対象を、USEフラグがONで、かつ、更新日が7日より前のBOOK
+        before_week = datetime.now(timezone(timedelta(hours=9), 'JST')) - timedelta(days=7)
+        vals = self.db.select_book(
+            **
+            {DB.URL: None, DB.BOOK_KEY: None, DB.KUMA_UPDATED: before_week.date().strftime('%Y-%m-%d'),
+             DB.TITLE: None, DB.USE_FLAG: DB.USE_FLAG_UPDATE})
+
+        self.chrome = Chrome(logging)
+        await self.chrome.start()
+
+        await self.download(vals)
+
+        await asyncio.sleep(10)
+
+        await self.chrome.stop()
+
+    async def updatenew(self, limit=2) -> None:
+        # DBの更新対象を、USEフラグがONのBOOK
+        dbvals = self.db.select_book(**{DB.URL: None, DB.BOOK_KEY: None, DB.KUMA_UPDATED: None,
+                                        DB.TITLE: None, DB.USE_FLAG: DB.USE_FLAG_UPDATE})
+        vals = []
+        newvals = []
+        self.chrome = Chrome(logging)
+        await self.chrome.start()
+
+        @func_hook
+        async def getHTML(page):
+            html = etree.HTML(await self.getTEXT4HTML(f'https://rawkuma.com/manga/?page={page}&type=manga&order=update'))
+
+            # //*[@id="content"]/div/div[1]/div[1]/div[2]/div[4]/div[1]/div/a
+            update = html.xpath('//div[@class="listupd"]/div[@class="bs"]/div[@class="bsx"]/a/@href')
+
+            vals.extend([self.get_id(url) for url in update])
+
+        sem = asyncio.Semaphore(self.LIMITS)
+
+        async def call(val):
+            async with sem:
+                return await getHTML(val)
+
+        await asyncio.gather(*[call(page) for page in [i for i in range(1, limit + 1)]])
+
+        # 新規追加ブックの更新時刻
+        newdate = datetime.strptime(self.ADDBOOK_DATE, '%Y-%m-%d %H:%M:%S%z').astimezone(timezone(timedelta(hours=9)))
+
+        for val in dbvals:
+            # 更新検索画面、5画面分のブック、または、新規追加ブックを更新確認対象にする
+            if val[DB.BOOK_KEY] in vals or val[DB.KUMA_UPDATED] == newdate:
+                newvals.append(val)
+
+        await self.download(newvals)
 
         await asyncio.sleep(10)
 
@@ -491,7 +536,7 @@ class getKuma2DB:
 
         for val in vals:
             logging.info(f'新規更新 {val[DB.BOOK_ID]} {val[DB.BOOK_KEY]}')
-            val[DB.KUMA_UPDATED] = '1900-01-01 00:00:00+09:00'
+            val[DB.KUMA_UPDATED] = self.ADDBOOK_DATE
             await self.updatedb2(val)
 
         await asyncio.sleep(10)
@@ -523,8 +568,12 @@ def main():
         kuma.close()
 
     elif len(sys.argv) == 2:
+        cmd = sys.argv[1]
         kuma = getKuma2DB()
-        kuma.printinfo(sys.argv[1])
+        if cmd.upper() == 'NEW':
+            asyncio.run(kuma.updatenew())
+        else:
+            kuma.printinfo(sys.argv[1])
         kuma.close()
 
     elif len(sys.argv) >= 3:
@@ -533,7 +582,9 @@ def main():
         logging.info('URL={URL}, TYPE={TYPE}'.format(URL=url, TYPE=type))
 
         kuma = getKuma2DB()
-        if type.upper() == 'ON' or type.upper() == 'OFF' or type.upper() == 'STOP':
+        if url.upper() == 'NEW':
+            asyncio.run(kuma.updatenew(limit=int(type)))
+        elif type.upper() == 'ON' or type.upper() == 'OFF' or type.upper() == 'STOP':
             # USEフラグ変更
             kuma.flagset(url, type)
         elif len(type) == 1 and 'A' <= type[0].upper() and type[0].upper() <= 'Z':
