@@ -21,7 +21,8 @@ def minify(src_path, dest_path):
 
     if extention=="html":
         s1 = "".join([s.strip() for s in s0]) # 各行の前後の空白を削除
-        s9 = re.sub('<!--.*?-->', '', s1) # コメントの削除
+        s2 = re.sub('/\*.*?\*/', '', s1) # コメントの削除
+        s9 = re.sub('<!--.*?-->', '', s2) # コメントの削除
     elif extention=="css":
         s1 = "".join([s.strip() for s in s0]) # 各行の前後の空白を削除
         s2 = re.sub('/\*.*?\*/', '', s1) # コメントの削除
