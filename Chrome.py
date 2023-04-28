@@ -71,7 +71,7 @@ class Chrome():
         self.proc.kill()
         self.proc.wait()
 
-        # 起動時に、user_dirが存在しなければ削除する
+        sleep(10)
         shutil.rmtree(self.user_dir)
 
     async def open_tab(self):
