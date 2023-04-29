@@ -3,57 +3,39 @@
         <meta charset="utf-8">
         <meta name="referrer" content="no-referrer">
         <style>
+/* スクロールバーを非表示 */
+/* WebKitベースのブラウザのスクロールバーを非表示にする */
+::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
+}
+
+/* Firefoxのスクロールバーを非表示にする */
+html {
+  scrollbar-width: none;
+}
+
 body {
     display: inline;
+    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
 }
 
 .HeaderPage {
-    position: sticky;
-    /* ヘッダーを固定する */
-    top: 0;
-    /* 上部から配置の基準位置を決める */
-    left: 0;
-    /* 左から配置の基準位置を決める */
-    width: 100%;
-    /* ヘッダーの横幅を指定する */
-    /* height: 15px; */
-    /* ヘッダーの高さを指定する */
-    padding: 2px;
-    /* ヘッダーの余白を指定する(上下左右) */
-    background-color: #31a9ee;
-    /* ヘッダーの背景色を指定する */
-    color: #000000;
-    /* フォントの色を指定する */
-    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
+    position: sticky;    /* ヘッダーを固定する */
+    top: 0;    /* 上部から配置の基準位置を決める */
+    left: 0;    /* 左から配置の基準位置を決める */
+    width: calc(100vw - 12px); /* 横幅を指定する */
+    /* height: 15px; */    /* 高さを指定する */
+    padding: 2px;    /* 余白を指定する(上下左右) */
+    background-color: #31a9ee;    /* 背景色を指定する */
+    color: #000000;    /* フォントの色を指定する */
     display: flex;
     font-size: 24px;
-}
-
-.ChapterHeader {
-    /*左固定記述*/
-    position: -webkit-sticky;
-    /*Safari用*/
-    position: sticky;
-    /* ヘッダーを固定する */
-    top: 0;
-    /* 上部から配置の基準位置を決める */
-    left: 0;
-    /* 左から配置の基準位置を決める */
-    width: 47%;
-    /* ヘッダーの横幅を指定する */
-    height: 100%;
-    /* ヘッダーの高さを指定する */
-    padding: 10px;
-    /* ヘッダーの余白を指定する(上下左右) */
-    background-color: #31a9ee;
-    /* ヘッダーの背景色を指定する */
-    color: #000000;
-    /* フォントの色を指定する */
-    float: left;
+    justify-content: space-between;
 }
 
 .Contents {
-    width: 100%;
+    width: calc(100vw - 12px);
     display: flex;
     flex-direction: row-reverse;
     flex-wrap: wrap;
@@ -77,6 +59,21 @@ body {
     margin-top: 2vh;
     margin-bottom: 2vh;
     pointer-events: none;
+    max-width: 100vw;
+}
+
+.Footer {
+    width: calc(100vw - 12px);
+    border-radius: 5px;
+    border: 3px solid #333;
+    background-color: #31a9ee;
+    padding: 3px;
+    margin: 3px;
+    font-size: 24px;
+}
+
+.no-underline {
+  text-decoration: none;
 }
 
 @media screen and (max-width: 1024px) and (orientation: portrait) {
@@ -104,42 +101,47 @@ body {
 }
 
 div.title {
-    white-space: nowrap;
-    /* 横幅のMAXに達しても改行しない */
-    overflow: hidden;
-    /* ハミ出した部分を隠す */
-    text-overflow: ellipsis;
-    /* 「…」と省略 */
-    -webkit-text-overflow: ellipsis;
-    /* Safari */
-    -o-text-overflow: ellipsis;
-    /* Opera */
-    font-size: 14px;
-    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
+    white-space: nowrap;    /* 横幅のMAXに達しても改行しない */
+    overflow: hidden;    /* ハミ出した部分を隠す */
+    text-overflow: ellipsis;    /* 「…」と省略 */
+    margin-right: auto;
+    margin-left: 10px;
+    font-size: 24px;
 }
 
 div.Next {
-    width: 20%;
+    margin: 0 10px 0 10px;
+    white-space: nowrap;
     font-size: 24px;
-    font-size: 14px;
-    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
+    border-radius: 5px;
+    border: 1px solid #333;
+}
+
+div.select-chapter {
+    margin-right: 10px;
+    margin-left: 10px;
+}
+
+.selecter {
+    font-size: 24px;
 }
 
 div.Prev {
-    width: 20%;
+    margin: 0 10px 0 10px;
+    white-space: nowrap;
     font-size: 24px;
-    font-size: 14px;
-    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
+    border-radius: 5px;
+    border: 1px solid #333;
 }
        </style>
     </head>
     <body>
         <div class="HeaderPage">
             <div class="Prev">
-                <a href="${prev["HREF"]}">${prev["NUM"]}</a>
+                <a href="${prev["HREF"]}" class="no-underline"><div>${prev["NUM"]}</div></a>
             </div>
-            <div>
-                <select onChange="location.href=value;">
+            <div class="select-chapter">
+                <select onChange="location.href=value;" class="selecter">
                     <option value="${chapter_top}">
                         Cahpter List
                     </option>
@@ -160,7 +162,7 @@ div.Prev {
                 <span>${title}</span>
             </div>
             <div class="Next">
-                <a href="${next["HREF"]}">${next["NUM"]}</a>
+                <a href="${next["HREF"]}" class="no-underline"><div>${next["NUM"]}</div></a>
             </div>
         </div>
         <div id="content" class="Contents">
@@ -175,7 +177,9 @@ div.Prev {
             </div>
         </div>
         <div class="Footer">
-            <a href="${next["HREF"]}">${next["NUM"]}</a>
+            <a href="${next["HREF"]}" class="no-underline">
+                <div>${next["NUM"]}</div>
+            </a>
         </div>
         <script type="text/javascript">
             <%doc>

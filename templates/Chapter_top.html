@@ -3,31 +3,170 @@
         <meta charset="utf-8">
         <meta name="referrer" content="no-referrer">
         <style>
-    <%include file="header_style.css" />
+/* スクロールバーを非表示 */
+/* WebKitベースのブラウザのスクロールバーを非表示にする */
+::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
+}
+
+/* Firefoxのスクロールバーを非表示にする */
+html {
+  scrollbar-width: none;
+}
+
+/* htmlで使用するフォントを指定 */
+html {
+    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
+}
+
+.HeaderPage {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 42px;
+    background-color: #31a9ee;
+}
+
+.BodyPage {
+    position: fixed;
+    top: 0;
+    left: 0;
+    margin-top: 42px; /* 上の空白を指定 */
+    max-height: calc(100vh - 42px);
+    overflow-y: auto;
+    /* padding: 2px; */
+}
+
+.header {
+    display 
+    width: 100%;
+    color: #000000;
+    font-size: 24px;
+    border-radius: 5px;
+    /* padding: 2px; */
+    border: 3px solid #333;
+}
+
+.no-underline {
+  text-decoration: none;
+}
+
+.wrapper {
+    /* position: relative; */
+    display: flex;
+    /* flex-wrap: wrap; */
+}
+
+.BookInfo {
+    /*左固定記述*/
+    position: -webkit-sticky;    /*Safari用*/
+    position: sticky;    /* ヘッダーを固定する */
+    top: 0;    /* 上部から配置の基準位置を決める */
+    left: 0;    /* 左から配置の基準位置を決める */
+    width: 40%;    /* 横幅を指定する */
+    height: 100%;    /* 高さを指定する */
+    padding: 10px;    /* 余白を指定する(上下左右) */
+    background-color: #31a9ee;    /* 背景色を指定する */
+    color: #000000;    /* フォントの色を指定する */
+}
+
+.ChapterList {
+    /*右固定記述*/
+    position: -webkit-sticky;    /*Safari用*/
+    position: sticky;    /* ヘッダーを固定する */
+    top: 0;    /* 上部から配置の基準位置を決める */
+    left: 0;    /* 左から配置の基準位置を決める */
+    width: 60%;    /* 横幅を指定する */
+    height: 100%;    /* 高さを指定する */
+    padding: 0 10px 0 10px;    /* 余白を指定する(上下左右) */
+    background-color: #31a9ee;    /* 背景色を指定する */
+    color: #000000;    /* フォントの色を指定する */
+}
+
+.chbox {
+    background-color: rgb(239, 239, 239);
+}
+
+.chbox {
+    margin-left: 0;
+}
+
+.chbox {
+    /* overflow: hidden; */
+    padding: 2px 10px;
+    border: 1px solid #333;
+    /* margin: 0 5px; */
+    margin-bottom: 3px;
+    /* position: relative; */
+    border-radius: 5px;
+}
+
+.title {
+    /* overflow: hidden; */
+    padding: 5px 10px;
+    border: 1px solid #333;
+    font-size: 24px;
+    /* margin: 0 5px; */
+    margin-bottom: 5px;
+    /* position: relative; */
+    border-radius: 5px;
+    background-color: rgb(239, 239, 239);
+}
+
+.clstyle {
+    padding: 0;
+    list-style-type: none;
+}
+
+.eph-num {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+}
+
+span.chapternum {
+    /* font-weight: 400; */
+    /* text-overflow: ellipsis; */
+    /* white-space: nowrap; */
+    font-size: 24px;
+}
+
+span.chapterdate {
+    font-size: 18px;
+}
         </style>
     </head>
     <body>
         <div class="HeaderPage">
-            <a href="../../Books${type}.html"><span>ブックリストに戻る</span></a>
+            <a href="../../Books${type}.html" class="no-underline">
+                <div class="header">ブックリストに戻る</div>
+            </a>
         </div>
-        <div class="wrapper">
-            <div class="ChapterHeader">
-                <img src="${thumb}" width="80%">
-                <br>
-                <span class="chbox">${title}</span>
-            </div>
-            <div class="ChapterList">
-                <ul class="clstyle">
-                    % for chapter in chapters:
-                    <li>
-                        <div class="chbox type-${chapter["KEY"].replace('.', '-')}">
-                            <div class="eph-num">
-                                <a href="${chapter["HREF"]}"><span class="chapternum">${chapter["NUM"]}</span><span class="chapterdate">${chapter["DATE"]}</span></a>
-                            </div>
-                        </div>
-                    </li>
-                    % endfor
-                </ul>
+        <div class="BodyPage">
+            <div class="wrapper">
+                <div class="BookInfo">
+                    <img src="${thumb}" width="80%">
+                    <br>
+                    <span class="title">${title}</span>
+                </div>
+                <div class="ChapterList">
+                    <ul class="clstyle">
+                        % for chapter in chapters:
+                        <li class="cllist">
+                            <a href="${chapter["HREF"]}" class="no-underline">
+                                <div class="chbox type-${chapter["KEY"].replace('.', '-')}">
+                                    <div class="eph-num">
+                                        <span class="chapternum">${chapter["NUM"]}</span>
+                                        <span class="chapterdate">${chapter["DATE"]}</span>
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+                        % endfor
+                    </ul>
+                </div>
             </div>
         </div>
         <%doc>
