@@ -107,29 +107,32 @@ div.title {
     margin-right: auto;
     margin-left: 10px;
     font-size: 24px;
+    line-height: 1;
 }
 
 div.Next {
-    margin: 0 10px 0 10px;
+    margin: 0 0 0 10px;
     white-space: nowrap;
     font-size: 24px;
+    line-height: 1;
     border-radius: 5px;
     border: 1px solid #333;
 }
 
 div.select-chapter {
-    margin-right: 10px;
-    margin-left: 10px;
+    margin-right: 0px;
+    margin-left: 0px;
 }
 
 .selecter {
-    font-size: 24px;
+    font-size: 14px;
 }
 
 div.Prev {
-    margin: 0 10px 0 10px;
+    margin: 0 10px 0 0;
     white-space: nowrap;
     font-size: 24px;
+    line-height: 1;
     border-radius: 5px;
     border: 1px solid #333;
 }
@@ -142,9 +145,6 @@ div.Prev {
             </div>
             <div class="select-chapter">
                 <select onChange="location.href=value;" class="selecter">
-                    <option value="${chapter_top}">
-                        Cahpter List
-                    </option>
                     % for chapter in chapters:
                     % if chapter["KEY"] == chapter_key:
                     <option value="${chapter["HREF"]}" selected>
@@ -159,7 +159,7 @@ div.Prev {
                 </select>
             </div>
             <div class="title">
-                <span>${title}</span>
+                <a href="${chapter_top}" class="no-underline"><span>${title}</span></a>
             </div>
             <div class="Next">
                 <a href="${next["HREF"]}" class="no-underline"><div>${next["NUM"]}</div></a>

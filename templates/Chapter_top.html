@@ -34,9 +34,9 @@ html {
     top: 0;
     left: 0;
     margin-top: 42px; /* 上の空白を指定 */
-    max-height: calc(100vh - 42px);
+    max-height: calc(100% - 42px);
     overflow-y: auto;
-    /* padding: 2px; */
+    width: 100%;
 }
 
 .header {
@@ -45,7 +45,6 @@ html {
     color: #000000;
     font-size: 24px;
     border-radius: 5px;
-    /* padding: 2px; */
     border: 3px solid #333;
 }
 
@@ -54,9 +53,7 @@ html {
 }
 
 .wrapper {
-    /* position: relative; */
     display: flex;
-    /* flex-wrap: wrap; */
 }
 
 .BookInfo {
@@ -94,23 +91,17 @@ html {
 }
 
 .chbox {
-    /* overflow: hidden; */
     padding: 2px 10px;
     border: 1px solid #333;
-    /* margin: 0 5px; */
     margin-bottom: 3px;
-    /* position: relative; */
     border-radius: 5px;
 }
 
 .title {
-    /* overflow: hidden; */
     padding: 5px 10px;
     border: 1px solid #333;
     font-size: 24px;
-    /* margin: 0 5px; */
     margin-bottom: 5px;
-    /* position: relative; */
     border-radius: 5px;
     background-color: rgb(239, 239, 239);
 }
@@ -127,9 +118,6 @@ html {
 }
 
 span.chapternum {
-    /* font-weight: 400; */
-    /* text-overflow: ellipsis; */
-    /* white-space: nowrap; */
     font-size: 24px;
 }
 
