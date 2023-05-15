@@ -115,3 +115,6 @@ class ChromeTab():
                 await asyncio.sleep(1)
         else:
             return None
+
+    async def evaluate(self, script) -> None:
+        await self.__tab.Runtime.evaluate(expression=script)
