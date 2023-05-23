@@ -542,8 +542,6 @@ def main():
             kuma.delete(url)
         elif type.upper() == "UPDATE":
             asyncio.run(kuma.update(url))
-        elif type.upper() == "TITLE" and len(sys.argv) == 4:
-            kuma.update_title(url, sys.argv[3])
         elif type.upper() == "TEST":
             asyncio.run(kuma.testbook(url))
         else:
@@ -561,6 +559,8 @@ def main():
         kuma = getKuma2DB()
         if type.upper() == "TEST":
             asyncio.run(kuma.testbook(url, int(arg1)))
+        elif type.upper() == "TITLE" and len(sys.argv) == 4:
+            kuma.update_title(url, arg1)
 
 
 if __name__ == "__main__":

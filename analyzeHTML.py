@@ -125,7 +125,13 @@ class kingrawHTML(getHTML):
                 (
                     href[0] if href else None,
                     re.sub(
-                        r"^.* ", "", nums[0].replace("\n", "").replace("\t", "")
+                        r"^.* ",
+                        "",
+                        nums[0]
+                        .replace("\n", "")
+                        .replace("\t", "")
+                        .replace("【", "")
+                        .replace("】", ""),
                     )  # '【第1.1話】'
                     if nums
                     else None,
