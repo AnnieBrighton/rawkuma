@@ -23,7 +23,7 @@ import unicodedata
 from Chrome import ChromeTab
 import logging
 
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 
 class analyzeHTML:
@@ -54,7 +54,9 @@ class analyzeHTML:
         types = [
             {"keyword": r"^https?://rawkuma.com/manga/([^/]+)/?$", "pre": ""},
             {"keyword": r"^https?://kingraw.co/manga/([^/]+)/?$", "pre": "king@"},
+            {"keyword": r"^https?://kingraw.co/title/([^/]+)/?$", "pre": "king@"},
             {"keyword": r"^https?://rawuwu.com/([^/]+)/?$", "pre": "uwu@"},
+            {"keyword": r"^https?://rawuwu.com/en/([^/]+)/?$", "pre": "uwu@"},
             {"keyword": r"^https?://raw.senmanga.com/([^/]+)/?$", "pre": "sen@"},
         ]
 
@@ -276,7 +278,7 @@ class rawkumaHTML(getHTML):
             dates = list.xpath('./a/span[@class="chapterdate"]/text()')
             vals.append(
                 (
-                    href[0] if href else None,
+                    unquote(href[0]) if href else None,
                     nums[0] if nums else None,
                     datetime.strptime(dates[0], "%B %d, %Y") if dates else None,
                 )
@@ -347,10 +349,10 @@ class rawkumaHTML(getHTML):
 
     def getThumbnail(self):
         lists = self.html.xpath('//div[@class="thumbook"]/div[@class="thumb"]/img/@src')
-        return lists[0] if lists else None
+        return re.sub(r"^//", r"https://", lists[0]) if lists else None
 
     def getURL2Chapter(self, url):
-        chapter = None
+        chapter = "0000.00"
         list = re.search(r"^https?://[^/]+/[^/]+-chapter-([0-9]+)-([0-9]+)/$", url)
         if list:
             chapter = "%04d.%02d" % (int(list.group(1)), int(list.group(2)))

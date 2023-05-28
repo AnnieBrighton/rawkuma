@@ -16,7 +16,8 @@ from datetime import datetime, timedelta, timezone
 import logging
 import re
 import sys
-from Chrome import Chrome, ChromeTab
+from urllib.parse import unquote
+from Chrome import Chrome
 
 from DB import DB
 from analyzeHTML import getGooglBooks, analyzeHTML
@@ -519,11 +520,11 @@ def main():
         if cmd.upper() == "NEW":
             asyncio.run(kuma.updatenew())
         else:
-            kuma.printinfo(sys.argv[1])
+            kuma.printinfo(unquote(sys.argv[1]))
         kuma.close()
 
     elif len(sys.argv) == 3:
-        url = sys.argv[1]
+        url = unquote(sys.argv[1])
         type = sys.argv[2]
         logging.info("URL={URL}, TYPE={TYPE}".format(URL=url, TYPE=type))
 
@@ -549,7 +550,7 @@ def main():
         kuma.close()
 
     elif len(sys.argv) >= 4:
-        url = sys.argv[1]
+        url = unquote(sys.argv[1])
         type = sys.argv[2]
         arg1 = sys.argv[3]
         logging.info(
