@@ -49,6 +49,9 @@ class analyzeHTML:
         「https://rawkuma.com/manga/oshi-no-ko/」 → 「oshi-no-ko」
         「https://kingraw.co/manga/556/」 → 「king@556」
         「https://rawuwu.com/haru-ni-fureru-c8982/」 → 「uwu@haru-ni-fureru-c8982」
+        「https://rawuwu.com/read/haru-ni-fureru-c8982/」 → 「uwu@haru-ni-fureru-c8982」
+        「https://rawuwu.com/en/haru-ni-fureru-c8982/」 → 「uwu@haru-ni-fureru-c8982」
+        「https://rawuwu.com/en/read/haru-ni-fureru-c8982/」 → 「uwu@haru-ni-fureru-c8982」
         「https://raw.senmanga.com/next-life/」 → 「sen@next-life」
         """
         types = [
@@ -56,7 +59,9 @@ class analyzeHTML:
             {"keyword": r"^https?://kingraw.co/manga/([^/]+)/?$", "pre": "king@"},
             {"keyword": r"^https?://kingraw.co/title/([^/]+)/?$", "pre": "king@"},
             {"keyword": r"^https?://rawuwu.com/([^/]+)/?$", "pre": "uwu@"},
+            {"keyword": r"^https?://rawuwu.com/read/([^/]+)/?$", "pre": "uwu@"},
             {"keyword": r"^https?://rawuwu.com/en/([^/]+)/?$", "pre": "uwu@"},
+            {"keyword": r"^https?://rawuwu.com/en/read/([^/]+)/?$", "pre": "uwu@"},
             {"keyword": r"^https?://raw.senmanga.com/([^/]+)/?$", "pre": "sen@"},
         ]
 
@@ -628,17 +633,21 @@ class rawuwuHTML(getHTML):
     # URLからチャプター番号を生成
     def getURL2Chapter(self, url):
         # https://rawuwu.com/read/tefuda-ga-oume-no-victoria-c19436/chapter-3.1/
-        chapter = None
+        chapter = "0000.00"
         list = re.search(
-            r"^https?://[^/]+/read/[^/]+/chapter-([0-9]+)\.([0-9]+)/?$", url
+            r"^https?://[^/]+/read/[^/]+/(en/)?(read/)?chapter-([0-9]+)\.([0-9]+)/?$",
+            url,
         )
         if list:
-            chapter = "%04d.%02d" % (int(list.group(1)), int(list.group(2)))
+            chapter = "%04d.%02d" % (int(list.group(3)), int(list.group(4)))
         else:
             # https://rawuwu.com/read/tefuda-ga-oume-no-victoria-c19436/chapter-2
-            list = re.search(r"^https?://[^/]+/read/[^/]+/chapter-([0-9]+)/?$", url)
+            # https://rawuwu.com/en/read/tokidoki-bosotto-roshiago-de-dereru-tonari-no-alya-san-c16480/chapter-15
+            list = re.search(
+                r"^https?://[^/]+/(en/)?(read/)?[^/]+/chapter-([0-9]+)/?$", url
+            )
             if list:
-                chapter = "%04d.00" % int(list.group(1))
+                chapter = "%04d.00" % int(list.group(3))
 
         return chapter
 
