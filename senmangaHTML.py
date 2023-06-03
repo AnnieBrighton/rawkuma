@@ -13,6 +13,10 @@ class senmangaHTML(getHTML, HTMLinterface):
     def __init__(self, chrome) -> None:
         super().__init__(chrome)
 
+    # URLが自身とマッチ判定
+    def isMatchURL(url):
+        return re.match(r"^https?://raw\.senmanga\.com/", url)
+
     # 漫画リストURLからbookeyを取得
     def getBookKey(url):
         """
@@ -27,7 +31,7 @@ class senmangaHTML(getHTML, HTMLinterface):
             if lists is not None:
                 return "sen@" + lists[1]
 
-        return url
+        return None
 
     # 漫画リストページURLリスト取得
     def getUpdateListUrl(limit):

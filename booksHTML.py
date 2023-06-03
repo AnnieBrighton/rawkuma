@@ -21,6 +21,11 @@ class getHTML:
 
 
 class HTMLinterface(ABC):
+    # URLが自身とマッチ判定
+    @abstractmethod
+    def isMatchURL(url):
+        pass
+
     # 漫画リストURLからbookeyを取得
     @abstractmethod
     def getBookKey(url):

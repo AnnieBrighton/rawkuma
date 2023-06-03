@@ -10,6 +10,10 @@ class kingrawHTML(getHTML, HTMLinterface):
     def __init__(self, chrome) -> None:
         super().__init__(chrome)
 
+    # URLが自身とマッチ判定
+    def isMatchURL(url):
+        return re.match(r"^https?://kingraw\.co/", url)
+
     # 漫画リストURLからbookeyを取得
     def getBookKey(url):
         """

@@ -32,12 +32,11 @@ class analyzeHTML:
         self.html = None
         if url is not None:
             for html in self.HTMLCLASS:
-                key = html.getBookKey(url)
-                if key is not None:
+                if html.isMatchURL(url):
                     self.html = html(chrome)
                     return
 
-        logging.info("マッチするドメインが見つかりません。url={url}".format(url=url))
+            logging.info("マッチするドメインが見つかりません。url={url}".format(url=url))
 
     def getHTML(self):
         return self.html
