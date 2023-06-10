@@ -137,7 +137,9 @@ class rawkumaHTML(getHTML, HTMLinterface):
 
     def getURL2Chapter(self, url):
         chapter = "0000.00"
-        list = re.search(r"^https?://[^/]+/[^/]+-chapter-([0-9]+)-([0-9]+)/$", url)
+        list = re.search(
+            r"^https?://[^/]+/[^/]+-chapter-([0-9]+)-([0-9]+)[^0-9]*/$", url
+        )
         if list:
             chapter = "%04d.%02d" % (int(list.group(1)), int(list.group(2)))
         else:
