@@ -12,19 +12,19 @@ class kingrawHTML(getHTML, HTMLinterface):
 
     # URLが自身とマッチ判定
     def isMatchURL(url):
-        return re.match(r"^https?://kingraw\.co/", url)
+        return re.match(r"^https?://rawpromax\.com/", url)
 
     # 漫画リストURLからbookeyを取得
     def getBookKey(url):
         """
-        「https://kingraw.co/manga/556/」 → 「king@556」
-        「https://kingraw.co/title/556/」 → 「king@556」
-        「https://kingraw.co/comic/1122/」 → 「king@1122」
+        「https://rawpromax.com/manga/556/」 → 「king@556」
+        「https://rawpromax.com/title/556/」 → 「king@556」
+        「https://rawpromax.com/comic/1122/」 → 「king@1122」
         """
         types = [
-            r"^https?://kingraw.co/manga/([^/]+)/?$",
-            r"^https?://kingraw.co/title/([^/]+)/?$",
-            r"^https?://kingraw.co/comic/([^/]+)/?$",
+            r"^https?://rawpromax.com/manga/([^/]+)/?$",
+            r"^https?://rawpromax.com/title/([^/]+)/?$",
+            r"^https?://rawpromax.com/comic/([^/]+)/?$",
         ]
 
         for type in types:
@@ -37,7 +37,7 @@ class kingrawHTML(getHTML, HTMLinterface):
     # 漫画リストページURLリスト取得
     def getUpdateListUrl(limit):
         return [
-            f"https://kingraw.co/manga/page/{page}/?m_orderby=latest"
+            f"https://rawpromax.com/manga/page/{page}/?m_orderby=latest"
             for page in range(1, limit + 1)
         ]
 
@@ -137,7 +137,7 @@ class kingrawHTML(getHTML, HTMLinterface):
 
     # URLからチャプター番号を生成
     def getURL2Chapter(self, url):
-        # 'https://kingraw.co/manga/556/chapter-1/  or  'https://kingraw.co/title/556/chapter-1/
+        # 'https://rawpromax.com/manga/556/chapter-1/  or  'https://rawpromax.com/title/556/chapter-1/
         chapter = "0000.00"
         list = re.search(
             r"^https?://[^/]+/(manga|title|comic)/[0-9]+/chapter-([0-9]+)-([0-9]+)/$",
