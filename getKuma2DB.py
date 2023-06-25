@@ -18,6 +18,7 @@ import re
 import sys
 from urllib.parse import unquote
 from Chrome import Chrome
+import unicodedata
 
 from DB import DB
 from analyzeHTML import getGooglBooks, analyzeHTML
@@ -500,6 +501,26 @@ class getKuma2DB:
 
         self.db.commit()
 
+    @func_hook
+    def search(self, title) -> None:
+        """TITLE検索
+        Args:
+            title : 検索文字列
+        """
+        vals = self.db.select_book(
+            **{
+                DB.URL: None,
+                DB.BOOK_KEY: None,
+                DB.KUMA_UPDATED: None,
+                DB.TITLE: "%{STR}%".format(
+                    STR=unicodedata.normalize("NFC", title.strip())
+                ),
+            }
+        )
+
+        for val in vals:
+            print("{KEY}  {TITLE}".format(KEY=val[DB.BOOK_KEY], TITLE=val[DB.TITLE]))
+
 
 #
 # メイン
@@ -545,6 +566,8 @@ def main():
             asyncio.run(kuma.update(url))
         elif type.upper() == "TEST":
             asyncio.run(kuma.testbook(url))
+        elif url.upper() == "SEARCH":
+            kuma.search(type)
         else:
             logging.info("{TYPE} error".format(TYPE=type))
         kuma.close()
