@@ -140,14 +140,14 @@ class kingrawHTML(getHTML, HTMLinterface):
         # 'https://rawpromax.com/manga/556/chapter-1/  or  'https://rawpromax.com/title/556/chapter-1/
         chapter = "0000.00"
         list = re.search(
-            r"^https?://[^/]+/(manga|title|comic)/[0-9]+/chapter-([0-9]+)-([0-9]+)/$",
+            r"^https?://[^/]+/(manga|title|comic)/[0-9-]+/chapter-([0-9]+)-([0-9]+)/$",
             url,
         )
         if list:
             chapter = "%04d.%02d" % (int(list.group(2)), int(list.group(3)))
         else:
             list = re.search(
-                r"^https?://[^/]+/(manga|title|comic)/[0-9]+/chapter-([0-9]+)/$", url
+                r"^https?://[^/]+/(manga|title|comic)/[0-9-]+/chapter-([0-9]+)/$", url
             )
             if list:
                 chapter = "%04d.00" % int(list.group(2))
