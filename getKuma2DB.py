@@ -221,7 +221,11 @@ class getKuma2DB:
         if val[DB.TITLE] is None or val[DB.TITLE] == "":
             books = getGooglBooks()
             title, author = books.getTitle(titles)
-            data[DB.TITLE] = title
+            data[DB.TITLE] = (
+                unicodedata.normalize("NFC", title.strip())
+                if title is not None
+                else None
+            )
             data[DB.AUTHOR] = ",".join(author)
 
         self.db.update_book(book_id, **data)
@@ -497,7 +501,9 @@ class getKuma2DB:
         """
         book_id = self.db.getBookID(self.get_book_key(url))
 
-        self.db.update_book(book_id, **{DB.TITLE: title})
+        self.db.update_book(
+            book_id, **{DB.TITLE: unicodedata.normalize("NFC", title.strip())}
+        )
 
         self.db.commit()
 
