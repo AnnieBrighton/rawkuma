@@ -4,11 +4,49 @@ from datetime import datetime, timedelta
 import re
 from booksHTML import HTMLinterface, getHTML
 from zoneinfo import ZoneInfo
+from Chrome import ChromeTab
+from lxml import etree
+import asyncio
 
 
 class rawuwuHTML(getHTML, HTMLinterface):
     def __init__(self, chrome) -> None:
         super().__init__(chrome)
+
+    async def getTEXT4HTML(self, url) -> None:
+        tab = ChromeTab(self.chrome)
+        await tab.open()
+        await tab.get(url)
+        self.text = await tab.getDOM()
+        self.html = etree.HTML(self.text)
+
+        # チャプター表示時に、画面に以下が出ていたら、continueをクリック
+        # You are viewing hidden content "xxxxx". Please click the 'continue' button to proceed.
+        goto = self.html.xpath(
+            '//div[@class="continue-hidden"]/a[@title="Continue" and @href="#goto"]'
+        )
+
+        if len(goto):
+            await tab.evaluate("""document.querySelector("a[href='#goto']").click();""")
+            await asyncio.sleep(2)
+
+            self.text = await tab.getDOM()
+            self.html = etree.HTML(self.text)
+
+        # ブックのチャプター一覧表示時に、Show allが画面に以下が出ていたら、continueをクリック
+        show = self.html.xpath(
+            '//div[@class="show-all-chapters"]/a[@title="Show all chapters" and @href="#show"]'
+        )
+
+        if len(show):
+            await tab.evaluate("""document.querySelector("a[href='#show']").click();""")
+            await asyncio.sleep(2)
+
+            self.text = await tab.getDOM()
+            self.html = etree.HTML(self.text)
+
+        await tab.close()
+        return
 
     # URLが自身とマッチ判定
     def isMatchURL(url):
@@ -57,14 +95,14 @@ class rawuwuHTML(getHTML, HTMLinterface):
         # //div[@class="manga-chapters"]/ul[@class="clearfix"]/li[div/a/@class="__link"]
 
         lists = self.html.xpath(
-            '//div[@class="manga-chapters"]/ul[@class="clearfix"]/li[div/a/@class="__link"]'
+            '//div[@class="manga-chapters"]/ul[@class="clearfix"]/li[a/@class="__link"]'
         )
 
         vals = []
         for list in lists:
-            href = list.xpath("./div/a/@href")
-            nums = list.xpath("./div/a/text()")
-            dates = list.xpath('./div[contains(@class, "alr")]/text()')
+            href = list.xpath("./a/@href")
+            nums = list.xpath('./a/div/div[contains(@class, "chaptern")]/text()')
+            dates = list.xpath('./a/div/div[contains(@class, "time")]/text()')
             vals.append(
                 (
                     "https://rawuwu.com" + href[0] if href else None,
