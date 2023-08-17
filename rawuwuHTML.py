@@ -101,8 +101,10 @@ class rawuwuHTML(getHTML, HTMLinterface):
         vals = []
         for list in lists:
             href = list.xpath("./a/@href")
-            nums = list.xpath('./a/div/div[contains(@class, "chaptern")]/text()')
-            dates = list.xpath('./a/div/div[contains(@class, "time")]/text()')
+            nums = list.xpath('./a/div/div[@class="chaptern"]/text()')
+            dates = list.xpath(
+                './a/div/div[@class="time"]/text() | ./a/div/time[@class="time"]/text()'
+            )
             vals.append(
                 (
                     "https://rawuwu.com" + href[0] if href else None,
@@ -151,13 +153,19 @@ class rawuwuHTML(getHTML, HTMLinterface):
 
     # 更新時刻を取得
     def getUpdatedOn(self):
-        # /html/body/div[2]/div[7]/div/div/div[2]/div[2]/ul/li[4]/div[2]
-        # //div[@class="manga-detail"]/ul/li[contains(div[@class="md-title"]/text(),"Updated")]/div[@class="md-content"]/text()
-        # 「2 hours ago」「1 days ago」「05-04-2023」
+        # /html/body/div[2]/div[7]/div/div/article/time
+        # 「[ Updated : 9:32 8/17/2023 ]」
         lists = self.html.xpath(
-            '//div[@class="manga-detail"]/ul/li[contains(div[@class="md-title"]/text(),"Updated")]/div[@class="md-content"]/text()'
+            '//div[@class="row"]/article/time[@class="time"]/text()'
         )
-        return self._getTimeStamp(lists[0]) if lists else None
+
+        return (
+            datetime.strptime(lists[0], "[ Updated : %H:%M %m/%d/%Y ]")
+            .astimezone(ZoneInfo("Asia/Tokyo"))
+            .replace(minute=0, second=0, microsecond=0)
+            if lists
+            else None
+        )
 
     # サムネイルイメージ取得
     def getThumbnail(self):
