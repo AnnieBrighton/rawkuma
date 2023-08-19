@@ -109,17 +109,17 @@ class getKuma2DB:
 
         book_key = self.get_book_key(url)
 
-        if book_key == url:
-            # ダウンロードできるURLでないため終了
-            logging.error(
-                "URL形式エラー:book_key={key}, url={url}".format(key=book_key, url=url)
-            )
-            return
-
         result = self.db.select_book(**{DB.BOOK_KEY: book_key, DB.BOOK_TYPE: None})
         logging.info(result)
 
         if len(result) == 0:
+            if book_key == url:
+                # ダウンロードできるURLでないため終了
+                logging.error(
+                    "URL形式エラー:book_key={key}, url={url}".format(key=book_key, url=url)
+                )
+                return
+
             self.db.insert_book(
                 **{
                     DB.BOOK_KEY: book_key,
