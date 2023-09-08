@@ -156,11 +156,11 @@ class rawuwuHTML(getHTML, HTMLinterface):
         # /html/body/div[2]/div[7]/div/div/article/time
         # 「[ Updated : 9:32 8/17/2023 ]」
         lists = self.html.xpath(
-            '//div[@class="row"]/article/time[@class="time"]/text()'
+            '//div[@class="row"]/article/time[@class="time"]/@datetime'
         )
 
         return (
-            datetime.strptime(lists[0], "[ Updated : %H:%M %m/%d/%Y ]")
+            datetime.strptime(lists[0], "%Y-%m-%dT%H:%M:%S%z")
             .astimezone(ZoneInfo("Asia/Tokyo"))
             .replace(minute=0, second=0, microsecond=0)
             if lists
