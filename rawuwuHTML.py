@@ -101,9 +101,9 @@ class rawuwuHTML(getHTML, HTMLinterface):
         vals = []
         for list in lists:
             href = list.xpath("./a/@href")
-            nums = list.xpath('./a/div/div[@class="chaptern"]/text()')
+            nums = list.xpath("./a/@title")
             dates = list.xpath(
-                './a/div/div[@class="time"]/text() | ./a/div/time[@class="time"]/text()'
+                './a/div/div[@class="ctime"]/text() | ./a/div/time[@class="time"]/text()'
             )
             vals.append(
                 (
@@ -154,10 +154,21 @@ class rawuwuHTML(getHTML, HTMLinterface):
     # 更新時刻を取得
     def getUpdatedOn(self):
         # /html/body/div[2]/div[7]/div/div/article/time
-        # 「[ Updated : 9:32 8/17/2023 ]」
         lists = self.html.xpath(
             '//div[@class="row"]/article/time[@class="time"]/@datetime'
         )
+
+        if len(lists) == 0:
+            # /html/body/div[2]/div[7]/div/div[2]/time
+            # ( Updated : 12:2 9/5/2023 )
+            lists = self.html.xpath('//div[@class="row"]/time[@class="time"]/text()')
+            return (
+                datetime.strptime(lists[0], "( Updated : %H:%M %m/%d/%Y )")
+                .astimezone(ZoneInfo("Asia/Tokyo"))
+                .replace(minute=0, second=0, microsecond=0)
+                if lists
+                else None
+            )
 
         return (
             datetime.strptime(lists[0], "%Y-%m-%dT%H:%M:%S%z")
@@ -212,11 +223,18 @@ class rawuwuHTML(getHTML, HTMLinterface):
 
         date = None
 
+        s = re.search(r"(\d+) sec ago", timestamp)
         m = re.search(r"(\d+) minutes ago", timestamp)
+        if m is None:
+            m = re.search(r"(\d+) min ago", timestamp)
         h = re.search(r"(\d+) hours ago", timestamp)
+        if h is None:
+            h = re.search(r"(\d+) hour ago", timestamp)
         d = re.search(r"(\d+) days ago", timestamp)
+        if d is None:
+            d = re.search(r"(\d+) day ago", timestamp)
 
-        if m is None and h is None and d is None:
+        if s is None and m is None and h is None and d is None:
             date = datetime.strptime(timestamp, "%d-%m-%Y").astimezone(
                 ZoneInfo("Asia/Tokyo")
             )
