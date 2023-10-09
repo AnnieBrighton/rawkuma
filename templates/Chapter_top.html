@@ -125,10 +125,35 @@ span.chapterdate {
     font-size: 18px;
 }
         </style>
+        <script type="text/javascript">
+            /* クエリパラメータを取得する関数 */
+            function getQueryParam(name) {
+                var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+                    results = regex.exec(window.location.href);
+                if (!results) return null;
+                if (!results[2]) return '';
+                return decodeURIComponent(results[2].replace(/\+/g, ' '));
+            }
+
+            function returnBookList(url) {
+                var abcValue = getQueryParam('TOP');
+                if (abcValue === '1') {
+                    /* BookListから遷移してきた場合、前のページに戻る */
+                    window.history.back();
+                } else {
+                    /* 指定されたURLに移動する */
+                    window.location.href = url;
+                }
+                /* デフォルトのaタグの動作を停止する */
+                return false;
+            }
+        </script>
     </head>
     <body>
         <div class="HeaderPage">
-            <a href="../../Books${type}.html" class="no-underline">
+            <a href="#"
+               onclick="return returnBookList('../../Books${type}.html');"
+               class="no-underline">
                 <div class="header">ブックリストに戻る</div>
             </a>
         </div>
