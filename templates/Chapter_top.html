@@ -212,6 +212,7 @@ span.chapterdate {
                     <div>
                         <label>
                             <input type="checkbox" id="MarkCheckbox" onclick="handleClick()">
+                            マーク
                         </label>
                     </div>
                 </div>
@@ -243,7 +244,7 @@ span.chapterdate {
             if (items != null && items !== "") {
                 items = JSON.parse(items);
                 if ("${book_key}" in items && "chapter" in items["${book_key}"]) {
-                    var color = ["#A09080", "#90A07d", "#80B07d", "#70C07d"];
+                    var color = ["#40F0B0","#60D090","#80B070","#A09050"];
                     var c = 0;
                     for (const item of items["${book_key}"]["chapter"].split(' ')) {
                         var tags = document.getElementsByClassName("type-" + item);

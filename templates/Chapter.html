@@ -239,7 +239,7 @@ div.Prev {
                         maxValue = items[key].number;
                     }
                 }
-                if (Object.keys(items).length > 5) {
+                if (Object.keys(items).length > 300) {
                     delete items[minKey];
                 }
                 items["${book_key}"] = {"number": maxValue + 1, "chapter": before_chapter};
