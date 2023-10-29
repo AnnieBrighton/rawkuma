@@ -119,6 +119,10 @@ class MkKuma2Html:
         ) as f:
             f.write(tmpl.render(**data))
 
+        tmpl = self.lookup.get_template("Books_Mark.html")
+        with open(os.path.join(self.BASE_PATH, "BooksMark.html"), mode="w") as f:
+            f.write(tmpl.render(**data))
+
     def output_chapter_top(self, type, book, path, chapters):
         """_summary_
 

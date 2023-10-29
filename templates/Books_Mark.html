@@ -160,45 +160,33 @@ a img {
         <div class="HeaderBook">
             <div class="chbox" id="myRow">
                 % for type in types:
-                % if cur_type == type:
-                <a>分類${type}</a>
-                % else:
-                <a href="Books${type}.html"> 分類${type} </a>
-                % endif
+                <a href="Books${type}.html">分類${type}</a>
                 % endfor
+                <a>マーク</a>
             </div>
         </div>
         <div class="BookList">
-            <div class="wapper">
-                % for book in books:
-                <div class="bs">
-                    <div class="bsx">
-                        <a href="${book["HREF"]}?TOP=1">
-                            <div class="limit">
-                                % if book["FLAG"] == 0:
-                                <span class="UpdateStatus">Completed</span>
-                                % elif book["FLAG"] == 2:
-                                <span class="UpdateStatus">&nbsp;&nbsp;Stoped&nbsp;&nbsp;&nbsp;</span>
-                                % endif
-                                <img src="${book["SRC"]}" width="200" height="auto">
-                            </div>
-                            <div class="bigor">
-                                <div class="tt">${book["TITLE"]}</div>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-                % endfor
-            </div>
+            <div class="wapper" id="myBooks"></div>
         </div>
         <script type="text/javascript">
             window.onload = function() {
                 let marks = localStorage.getItem("CHAPTER_MARKER");
                 if (marks != null && marks != "") {
                     marks = JSON.parse(marks);
-                    if (Object.keys(marks).length > 0) {
-                        let row = document.getElementById("myRow");
-                        row.insertAdjacentHTML("beforeend", '<a href="BooksMark.html">マーク</a>');
+
+                    for (let key in marks) {
+                        let title = marks[key]["title"];
+                        let thumb = marks[key]["thumb"];
+                        let url = marks[key]["url"];
+
+                        let row = document.getElementById("myBooks");
+                        row.insertAdjacentHTML("beforeend",
+                            '<div class="bs"><div class="bsx">' + 
+                                '<a href="' + url + '">' +
+                                    '<div class="limit"><img src="' + thumb + '" width="200" height="auto"></div>' +
+                                    '<div class="bigor"><div class="tt">' + title + '</div></div>' +
+                                '</a>' +
+                            '</div></div>');
                     }
                 }
             }

@@ -78,16 +78,16 @@ body {
 
 @media screen and (max-width: 1024px) and (orientation: portrait) {
     .Contents{
-        display: block;
+display: block;
         width: 100%;
         display:flex;
-        pointer-events: none;
+pointer-events: none;
     }
     .Contents>div{
         display: block;
         width: 100%;
         height: 100%;
-        pointer-events: none;
+pointer-events: none;
     }
     .Contents>div>img{
         margin-top: 0;
@@ -96,7 +96,7 @@ body {
         height: 95vh;
         display: block;
         margin:auto;
-        pointer-events: none;
+    pointer-events: none;
     }
 }
 
@@ -136,44 +136,67 @@ div.Prev {
     border-radius: 5px;
     border: 1px solid #333;
 }
-       </style>
+        </style>
+        <script type="text/javascript">
+            /* クエリパラメータを取得する関数 */
+            function getQueryParam(name) {
+                var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+                    results = regex.exec(window.location.href);
+                if (!results) return null;
+                if (!results[2]) return '';
+                return decodeURIComponent(results[2].replace(/\+/g, ' '));
+            }
+
+            function returnBookList(url) {
+                var abcValue = getQueryParam('MARK');
+                if (abcValue === '1') {
+                    window.location.href = url + "?MARK=1";
+                } else {
+                    window.location.href = url;
+                }
+                /* デフォルトのaタグの動作を停止する */
+                return false;
+            }
+        </script>
     </head>
     <body>
         <div class="HeaderPage">
             <div class="Prev">
-                <a href="${prev["HREF"]}" class="no-underline"><div>${prev["NUM"]}</div></a>
+                <a href="${prev["HREF"]}" class="no-underline">
+                    <div>${prev["NUM"]}</div>
+                </a>
             </div>
             <div class="select-chapter">
                 <select onChange="location.href=value;" class="selecter">
                     % for chapter in chapters:
                     % if chapter["KEY"] == chapter_key:
-                    <option value="${chapter["HREF"]}" selected>
-                        ${chapter["NUM"]}
-                    </option>
+                    <option value="${chapter["HREF"]}" selected>${chapter["NUM"]}</option>
                     % else:
-                    <option value="${chapter["HREF"]}">
-                        ${chapter["NUM"]}
-                    </option>
+                    <option value="${chapter["HREF"]}">${chapter["NUM"]}</option>
                     % endif
                     % endfor
                 </select>
             </div>
             <div class="title">
-                <a href="${chapter_top}" class="no-underline"><span>${title}</span></a>
+                <a href="#"
+                   onclick="return returnBookList('${chapter_top}');"
+                   class="no-underline"><span>${title}</span></a>
             </div>
             <div class="Next">
-                <a href="${next["HREF"]}" class="no-underline"><div>${next["NUM"]}</div></a>
+                <a href="${next["HREF"]}" class="no-underline">
+                    <div>${next["NUM"]}</div>
+                </a>
             </div>
         </div>
         <div id="content" class="Contents">
             <div>
-            % for i, page in enumerate(pages):
-            % if i > 2:
-            <img loading="lazy" class="noContextMenu" src="${page}">
-            % else:
-            <img class="noContextMenu" src="${page}">
-            % endif
-            % endfor
+                % for i, page in enumerate(pages):
+                % if i > 2:
+                <img loading="lazy" class="noContextMenu" src="${page}">
+                % else:
+                <img class="noContextMenu" src="${page}">
+                % endif
+                % endfor
             </div>
         </div>
         <div class="Footer">
@@ -185,14 +208,44 @@ div.Prev {
             <%doc>
             現在閲覧中のチャプターをキーに保存する。
             </%doc>
-            const items = localStorage.getItem("${book_key}");
-            var before_chapter = "${chapter_key.replace('.', '-')}";
-            if (items != null && items != "") {
-                if (before_chapter != items.split(' ')[0]) {
-                    before_chapter += ' ' + items.split(' ')[0]
-                }
+            var items = localStorage.getItem("CHAPTER_NUMBER");
+            if (items == null || items === "") {
+                items = {};
+            } else {
+                items = JSON.parse(items);
             }
-            localStorage.setItem("${book_key}", before_chapter);
+
+            var before_chapter = "${chapter_key.replace('.', '-')}";
+            if ("${book_key}" in items && "chapter" in items["${book_key}"] && items["${book_key}"]["chapter"] != null) {
+                let c = 1;
+                for (const item of items["${book_key}"]["chapter"].split(' ')) {
+                    if (before_chapter != item && c < 3) {
+                        before_chapter += ' ' + item;
+                    }
+                    c++;
+                }
+                items["${book_key}"]["chapter"] = before_chapter;
+            } else {
+                let minKey = null;
+                let minValue = 999999999;
+                let maxValue = 0;
+
+                for (let key in items) {
+                    if (items[key].number < minValue) {
+                        minValue = items[key].number;
+                        minKey = key;
+                    }
+                    if (items[key].number > maxValue) {
+                        maxValue = items[key].number;
+                    }
+                }
+                if (Object.keys(items).length > 5) {
+                    delete items[minKey];
+                }
+                items["${book_key}"] = {"number": maxValue + 1, "chapter": before_chapter};
+            }
+
+            localStorage.setItem("CHAPTER_NUMBER", JSON.stringify(items));
 
             <%doc>
             画像要素に対しては、右クリック・長押しでメニューを出さない。

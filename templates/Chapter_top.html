@@ -142,11 +142,55 @@ span.chapterdate {
                     window.history.back();
                 } else {
                     /* 指定されたURLに移動する */
+                    abcValue = getQueryParam('MARK');
+                    if (abcValue === '1') {
+                        window.location.href = '../../BooksMark.html';
+                    } else {
+                        window.location.href = url;
+                    }
+                }
+                /* デフォルトのaタグの動作を停止する */
+                return false;
+            }
+
+            function returnChapter(url) {
+                var abcValue = getQueryParam('MARK');
+                if (abcValue === '1') {
+                    window.location.href = url + '?MARK=1';
+                } else {
                     window.location.href = url;
                 }
                 /* デフォルトのaタグの動作を停止する */
                 return false;
             }
+
+            function handleClick() {
+                let checkbox = document.getElementById('MarkCheckbox');
+                let marks = localStorage.getItem("CHAPTER_MARKER");
+                if (marks != null) {
+                    marks = JSON.parse(marks);
+                } else {
+                    marks = {}
+                }
+
+                if (checkbox.checked) {
+                    let regex = new RegExp('([^/]*/[^/]*/[^/?]*)[^/]*$'),
+                        results = regex.exec(window.location.href);
+                    if (!results || !results[1]) {
+                        url = '';
+                    } else {
+                        url = results[1];
+                    }
+
+                    marks["${book_key}"] = {"title": "${title}", "thumb": "${thumb}", "url": url + '?TOP=1&MARK=1'};
+                    localStorage.setItem("CHAPTER_MARKER", JSON.stringify(marks));
+                } else {
+                    if (marks != null && "${book_key}" in marks) {
+                        delete marks["${book_key}"];
+                        localStorage.setItem("CHAPTER_MARKER", JSON.stringify(marks));
+                    }
+                }
+            };
         </script>
     </head>
     <body>
@@ -162,13 +206,22 @@ span.chapterdate {
                 <div class="BookInfo">
                     <img src="${thumb}" width="80%">
                     <br>
-                    <span class="title">${title}</span>
+                    <div>
+                        <span class="title">${title}</span>
+                    </div>
+                    <div>
+                        <label>
+                            <input type="checkbox" id="MarkCheckbox" onclick="handleClick()">
+                        </label>
+                    </div>
                 </div>
                 <div class="ChapterList">
                     <ul class="clstyle">
                         % for chapter in chapters:
                         <li class="cllist">
-                            <a href="${chapter["HREF"]}" class="no-underline">
+                            <a href="#"
+                               onclick='return returnChapter("${chapter["HREF"]}");'
+                               class="no-underline">
                                 <div class="chbox type-${chapter["KEY"].replace('.', '-')}">
                                     <div class="eph-num">
                                         <span class="chapternum">${chapter["NUM"]}</span>
@@ -186,18 +239,41 @@ span.chapterdate {
         ローカルストレージからキー=book_keyで情報を取得
         </%doc>
         <script type="text/javascript">
-            const items = localStorage.getItem("${book_key}");
-            if (items != null && items != "") {
-                var color = "#A09080";
-                for (const item of items.split(' ')) {
-                    var tags = document.getElementsByClassName("type-" + item);
-                    len = tags.length|0;
-                    for (i = 0; i < len; i = i + 1) {
-                        tags[i].style.background = color;
+            var items = localStorage.getItem("CHAPTER_NUMBER");
+            if (items != null && items !== "") {
+                items = JSON.parse(items);
+                if ("${book_key}" in items && "chapter" in items["${book_key}"]) {
+                    var color = ["#A09080", "#90A07d", "#80B07d", "#70C07d"];
+                    var c = 0;
+                    for (const item of items["${book_key}"]["chapter"].split(' ')) {
+                        var tags = document.getElementsByClassName("type-" + item);
+                        len = tags.length|0;
+                        for (i = 0; i < len; i = i + 1) {
+                            tags[i].style.background = color[c];
+                        }
+                        c++;
+                        if (c > color.length) {
+                            break;
+                        }
                     }
-                    color = "#a090807d";
                 }
             }
+            var checkbox = document.getElementById('MarkCheckbox');
+            var marks = localStorage.getItem("CHAPTER_MARKER");
+            if (marks != null && marks != "") {
+                marks = JSON.parse(marks);
+
+                if ("${book_key}" in marks) {
+                    /* チェックボックスをチェック */
+                    checkbox.checked = true;
+                } else {
+                    /* チェックボックスのチェックを外す */
+                    checkbox.checked = false;
+                }
+            } else {
+                marks = {}
+            }
+
         </script>
     </body>
 </html>
