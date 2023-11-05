@@ -157,17 +157,30 @@ div.Prev {
                 /* デフォルトのaタグの動作を停止する */
                 return false;
             }
+
+            function returnChapter(url) {
+                var abcValue = getQueryParam('MARK');
+                if (abcValue === '1') {
+                    window.location.href = url + '?MARK=1';
+                } else {
+                    window.location.href = url;
+                }
+                /* デフォルトのaタグの動作を停止する */
+                return false;
+            }
         </script>
     </head>
     <body>
         <div class="HeaderPage">
             <div class="Prev">
-                <a href="${prev["HREF"]}" class="no-underline">
+                <a href="#"
+                   onclick="return returnChapter('${prev["HREF"]}');"
+                   class="no-underline">
                     <div>${prev["NUM"]}</div>
                 </a>
             </div>
             <div class="select-chapter">
-                <select onChange="location.href=value;" class="selecter">
+                <select onChange="return returnChapter(value);" class="selecter">
                     % for chapter in chapters:
                     % if chapter["KEY"] == chapter_key:
                     <option value="${chapter["HREF"]}" selected>${chapter["NUM"]}</option>
@@ -183,7 +196,9 @@ div.Prev {
                    class="no-underline"><span>${title}</span></a>
             </div>
             <div class="Next">
-                <a href="${next["HREF"]}" class="no-underline">
+                <a href="#"
+                   onclick="return returnChapter('${next["HREF"]}');"
+                   class="no-underline">
                     <div>${next["NUM"]}</div>
                 </a>
             </div>
@@ -200,7 +215,9 @@ div.Prev {
             </div>
         </div>
         <div class="Footer">
-            <a href="${next["HREF"]}" class="no-underline">
+            <a href="#"
+               onclick="return returnChapter('${next["HREF"]}');"
+               class="no-underline">
                 <div>${next["NUM"]}</div>
             </a>
         </div>

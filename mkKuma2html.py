@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 from DB import DB
+import html
 
 from urllib.parse import unquote
 from mako.template import Template
@@ -57,11 +58,13 @@ class MkKuma2Html:
             for book in books:
                 chapters = self.db.select_chapter(book[DB.BOOK_ID])
 
-                path = unquote(os.path.join(
-                    self.BASE_PATH,
-                    "img{TYPE}".format(TYPE=book[DB.BOOK_TYPE]),
-                    book[DB.BOOK_KEY],
-                ))
+                path = unquote(
+                    os.path.join(
+                        self.BASE_PATH,
+                        "img{TYPE}".format(TYPE=book[DB.BOOK_TYPE]),
+                        book[DB.BOOK_KEY],
+                    )
+                )
 
                 # チャプター格納ディレクトリ作成
                 os.makedirs(path, exist_ok=True)
@@ -108,7 +111,9 @@ class MkKuma2Html:
                     ),
                     "SRC": book[DB.THUMB],
                     "FLAG": book[DB.USE_FLAG],
-                    "TITLE": book[DB.TITLE],
+                    "TITLE": html.escape(book[DB.TITLE], quote=True)
+                    if book[DB.TITLE] is not None
+                    else "未設定",
                 }
                 for book in books
             ],
@@ -138,7 +143,9 @@ class MkKuma2Html:
         data = {
             "type": type,
             "thumb": book[DB.THUMB],
-            "title": book[DB.TITLE],
+            "title": html.escape(book[DB.TITLE], quote=True)
+            if book[DB.TITLE] is not None
+            else "未設定",
             "book_key": book[DB.BOOK_KEY],
             "chapters": [
                 {
@@ -187,7 +194,9 @@ class MkKuma2Html:
                 },
                 "book_key": book[DB.BOOK_KEY],
                 "chapter_key": chapter[DB.CHAPTER_KEY],
-                "title": book[DB.TITLE],
+                "title": html.escape(book[DB.TITLE], quote=True)
+                if book[DB.TITLE] is not None
+                else "未設定",
                 "chapter_top": book[DB.BOOK_KEY] + ".html",
                 "chapters": [
                     {
