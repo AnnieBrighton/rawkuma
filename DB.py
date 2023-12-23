@@ -209,29 +209,18 @@ class DB:
 
         value = []
         where = []
-        if DB.BOOK_ID in kwargs and kwargs[DB.BOOK_ID] is not None:
-            where.append("book_id = ?")
-            value.append(kwargs[DB.BOOK_ID])
 
-        if DB.BOOK_KEY in kwargs and kwargs[DB.BOOK_KEY] is not None:
-            where.append("book_key = ?")
-            value.append(kwargs[DB.BOOK_KEY])
+        def xset(key, str):
+            if key in kwargs and kwargs[key] is not None:
+                where.append(f"{str}")
+                value.append(kwargs[key])
 
-        if DB.BOOK_TYPE in kwargs and kwargs[DB.BOOK_TYPE] is not None:
-            where.append("book_type = ?")
-            value.append(kwargs[DB.BOOK_TYPE])
-
-        if DB.USE_FLAG in kwargs and kwargs[DB.USE_FLAG] is not None:
-            where.append("use_flag = ?")
-            value.append(kwargs[DB.USE_FLAG])
-
-        if DB.KUMA_UPDATED in kwargs and kwargs[DB.KUMA_UPDATED] is not None:
-            where.append("kuma_updated < ?")
-            value.append(kwargs[DB.KUMA_UPDATED])
-
-        if DB.TITLE in kwargs and kwargs[DB.TITLE] is not None:
-            where.append("title LIKE ?")
-            value.append(kwargs[DB.TITLE])
+        xset(DB.BOOK_ID, "book_id = ?")
+        xset(DB.BOOK_KEY, "book_key = ?")
+        xset(DB.BOOK_TYPE, "book_type = ?")
+        xset(DB.USE_FLAG, "use_flag = ?")
+        xset(DB.KUMA_UPDATED, "kuma_updated < ?")
+        xset(DB.TITLE, "title LIKE ?")
 
         sql += " where {W}".format(W=" and ".join(where)) if len(where) != 0 else ""
         sql += " order by kuma_updated desc"
@@ -322,7 +311,7 @@ class DB:
         )
 
         for val in cur.fetchall():
-            self.delete_chapter(val[0])
+            self.delete_chapter(**{DB.BOOK_ID: val[0]})
 
         cur.execute(
             "delete from {TABLE} where book_key = ?".format(TABLE=self.book_name_table),
@@ -422,48 +411,86 @@ class DB:
         cur.close()
         return len(lists) > 0
 
-    def select_chapter(self, book_id):
+    def select_chapter(self, **kwargs):
         cur = self.conn.cursor()
-        cur.execute(
-            """
-            select chapter_id, chapter_key, chapter_url, chapter_num, chapter_date from {TABLE} where book_id = ? order by chapter_key
-        """.format(
-                TABLE=self.chapter_name_table
-            ),
-            (book_id,),
-        )
 
-        lists = [
-            {
-                DB.CHAPTER_ID: val[0],
-                DB.CHAPTER_KEY: val[1],
-                DB.CHAPTER_URL: val[2],
-                DB.CHAPTER_NUM: val[3],
-                DB.CHAPTER_DATE: datetime.strptime(val[4], "%Y-%m-%d %H:%M:%S")
-                if val[4] is not None
-                else None,
-            }
-            for val in cur.fetchall()
-        ]
+        sql = "select chapter_id "
+        sql += ", book_id " if DB.BOOK_ID in kwargs else ""
+        sql += ", chapter_key " if DB.CHAPTER_KEY in kwargs else ""
+        sql += ", chapter_url " if DB.CHAPTER_URL in kwargs else ""
+        sql += ", chapter_num " if DB.CHAPTER_NUM in kwargs else ""
+        sql += ", chapter_date " if DB.CHAPTER_DATE in kwargs else ""
+        sql += " from {TABLE} ".format(TABLE=self.chapter_name_table)
+
+        value = []
+        where = []
+
+        def xset(key, str):
+            if key in kwargs and kwargs[key] is not None:
+                where.append(f"{str}")
+                value.append(kwargs[key])
+
+        xset(DB.BOOK_ID, "book_id = ?")
+        xset(DB.CHAPTER_ID, "chapter_id = ?")
+        xset(DB.CHAPTER_KEY, "chapter_key = ?")
+        xset(DB.CHAPTER_URL, "chapter_url = ?")
+        xset(DB.CHAPTER_NUM, "chapter_num = ?")
+
+        sql += " where {W}".format(W=" and ".join(where)) if len(where) != 0 else ""
+        sql += " order by chapter_key"
+
+        cur.execute(sql, tuple(value))
+
+        vals = []
+        for row in cur.fetchall():
+            l = list(row)
+            val = {DB.CHAPTER_ID: l.pop(0)}
+            val.update({DB.BOOK_ID: l.pop(0)}) if DB.BOOK_ID in kwargs else ""
+            val.update({DB.CHAPTER_KEY: l.pop(0)}) if DB.CHAPTER_KEY in kwargs else ""
+            val.update({DB.CHAPTER_URL: l.pop(0)}) if DB.CHAPTER_URL in kwargs else ""
+            val.update({DB.CHAPTER_NUM: l.pop(0)}) if DB.CHAPTER_NUM in kwargs else ""
+            if DB.CHAPTER_DATE in kwargs:
+                v = l.pop(0)
+                val.update(
+                    {
+                        DB.CHAPTER_DATE: datetime.strptime(
+                            v, "%Y-%m-%d %H:%M:%S"
+                        ).astimezone(timezone(timedelta(hours=9)))
+                        if v is not None
+                        else None
+                    }
+                )
+            vals.append(val)
+
         cur.close()
-        return lists
+        return vals
 
-    def delete_chapter(self, book_id) -> None:
+    def delete_chapter(self, **kwargs) -> None:
         cur = self.conn.cursor()
-        cur.execute(
-            "select chapter_id from {TABLE} where book_id = ?".format(
-                TABLE=self.chapter_name_table
-            ),
-            (book_id,),
-        )
+
+        sql = "select chapter_id from {TABLE} ".format(TABLE=self.chapter_name_table)
+
+        value = []
+        where = []
+
+        def xset(key, str):
+            if key in kwargs and kwargs[key] is not None:
+                where.append(f"{str}")
+                value.append(kwargs[key])
+
+        xset(DB.BOOK_ID, "book_id = ?")
+        xset(DB.CHAPTER_ID, "chapter_id = ?")
+
+        sql += " where {W}".format(W=" and ".join(where)) if len(where) != 0 else ""
+
+        cur.execute(sql, tuple(value))
 
         for val in cur.fetchall():
             self.delete_page(val[0])
 
-        sql = "delete from {TABLE} where book_id = ?".format(
-            TABLE=self.chapter_name_table
-        )
-        value = (book_id,)
+        sql = "delete from {TABLE} ".format(TABLE=self.chapter_name_table)
+        sql += " where {W}".format(W=" and ".join(where)) if len(where) != 0 else ""
+
         self.__logging.info(sql)
         self.__logging.info(tuple(value))
         cur.execute(sql, tuple(value))

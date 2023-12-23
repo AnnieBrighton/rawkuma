@@ -56,7 +56,16 @@ class MkKuma2Html:
             self.output_book_type(books, types, type)
 
             for book in books:
-                chapters = self.db.select_chapter(book[DB.BOOK_ID])
+                chapters = self.db.select_chapter(
+                    **{
+                        DB.BOOK_ID: book[DB.BOOK_ID],
+                        DB.CHAPTER_ID: None,
+                        DB.CHAPTER_KEY: None,
+                        DB.CHAPTER_URL: None,
+                        DB.CHAPTER_NUM: None,
+                        DB.CHAPTER_DATE: None,
+                    }
+                )
 
                 path = unquote(
                     os.path.join(

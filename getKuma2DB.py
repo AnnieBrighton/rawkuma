@@ -446,14 +446,22 @@ class getKuma2DB:
         Args:
             url (_type_): BOOK URL
         """
-        book_key = self.get_book_key(url)
-        vals = self.db.select_book(
-            **{DB.URL: None, DB.BOOK_ID: None, DB.BOOK_KEY: book_key}
-        )
 
-        for val in vals:
-            self.db.delete_chapter(val[DB.BOOK_ID])
-        self.db.commit()
+        # 指定URLがチャプターテーブルに存在するか確認
+        chapters = self.db.select_chapter(**{DB.CHAPTER_URL: url})
+
+        if len(chapters) == 0:
+            # チャプターテーブルになければ、ブック指定として処理
+            book_key = self.get_book_key(url)
+            vals = self.db.select_book(
+                **{DB.URL: None, DB.BOOK_ID: None, DB.BOOK_KEY: book_key}
+            )
+            for val in vals:
+                self.db.delete_chapter(**{DB.BOOK_ID: val[DB.BOOK_ID]})
+            self.db.commit()
+        else:
+            self.db.delete_chapter(**{DB.CHAPTER_ID: chapters[0][DB.CHAPTER_ID]})
+            self.db.commit()
 
     @func_hook
     def delete(self, url) -> None:
