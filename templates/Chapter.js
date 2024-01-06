@@ -71,6 +71,11 @@ function saveChapterKey() {
     localStorage.setItem("CHAPTER_NUMBER", JSON.stringify(items));
 }
 
+function updateProgressBar(progress) {
+    var progressBar = document.getElementById("myProgressBar");
+    progressBar.style.width = progress + '%';
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     var imageUrls = Array.from(document.querySelectorAll('#image-urls td')).map(td => td.textContent.replace(/\r\n|\n|\r/gm, "").trim());
     var viewer = document.getElementById('image-viewer');
@@ -100,6 +105,10 @@ document.addEventListener('DOMContentLoaded', function () {
             if (index + count == imageUrls.length) {
                 currentIndex = index + count;
 
+                next_center.style.visibility = "visible";
+                image_center.style.visibility = "hidden";
+                image_center.src = imageUrls[0];
+
                 next_left.style.visibility = "hidden";
                 next_right.style.visibility = "visible";
 
@@ -109,11 +118,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 image_left.src = imageUrls[0];
                 image_right.src = imageUrls[0];
 
-                next_center.style.visibility = "visible";
-                image_center.style.visibility = "hidden";
-                image_center.src = imageUrls[0];
             } else if (count == 2 && index + count + 1 == imageUrls.length) {
                 currentIndex = index + count;
+
+                next_center.style.visibility = "hidden";
+                image_center.style.visibility = "visible";
+                image_center.src = imageUrls[0];
 
                 next_left.style.visibility = "visible";
                 next_right.style.visibility = "hidden";
@@ -124,11 +134,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 image_left.src = imageUrls[currentIndex];
                 image_right.src = imageUrls[currentIndex];
 
-                next_center.style.visibility = "hidden";
-                image_center.style.visibility = "visible";
-                image_center.src = imageUrls[0];
             } else {
                 currentIndex = index + count;
+
+                next_center.style.visibility = "hidden";
+                image_center.style.visibility = "visible";
+                image_center.src = imageUrls[currentIndex];
 
                 next_left.style.visibility = "hidden";
                 next_right.style.visibility = "hidden";
@@ -139,9 +150,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 image_left.src = imageUrls[(currentIndex + 1) % imageUrls.length];
                 image_right.src = imageUrls[currentIndex];
 
-                next_center.style.visibility = "hidden";
-                image_center.style.visibility = "visible";
-                image_center.src = imageUrls[currentIndex];
             }
         }
     }
@@ -151,6 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (index < imageUrls.length) {
             var img = new Image();
             img.onload = function () {
+                updateProgressBar((index + 1) * 100 / imageUrls.length);
                 /* 読み込み完了後に、次の画像読み込みを行う */
                 preloadNextImage(index + 1);
             };
@@ -186,11 +195,11 @@ document.addEventListener('DOMContentLoaded', function () {
     /* 矢印キーの処理 */
     document.addEventListener('keydown', function (event) {
         if (event.key === 'ArrowRight') showPreviousImage();
-        if (event.key === 'ArrowLeft') showNextImage();
+        if (event.key === 'ArrowLeft' || event.key === ' ') showNextImage();
     });
 
     /* 初期画像の表示 */
     updateImageView(0);
     /* プリロード */
-    preloadNextImage(currentIndex + 1);
+    preloadNextImage(0);
 });
