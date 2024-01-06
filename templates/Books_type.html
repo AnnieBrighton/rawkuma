@@ -1,160 +1,10 @@
 <html xmlns="https://www.w3.org/1999/xhtml" lang="en-US">
     <head>
         <meta charset="utf-8">
+        <meta name="viewport"
+              content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
         <meta name="referrer" content="no-referrer">
-        <style>
-body {
-    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
-}
-
-.HeaderBook {
-    position: fixed;
-    /* ヘッダーを固定する */
-    top: 0;
-    /* 上部から配置の基準位置を決める */
-    left: 0;
-    /* 左から配置の基準位置を決める */
-    width: 100%;
-    /* ヘッダーの横幅を指定する */
-    height: 50px;
-    /* ヘッダーの高さを指定する */
-    padding: 5px;
-    /* ヘッダーの余白を指定する(上下左右) */
-    background-color: #31a9ee;
-    /* ヘッダーの背景色を指定する */
-    color: #000000;
-    /* フォントの色を指定する */
-    z-index: 999;
-}
-
-.BookList {
-    margin-top: 60px; /* 上の空白を指定 */
-    height: auto;
-}
-
-.chbox {
-    background: #efefef;
-    background-image: initial;
-    background-position-x: initial;
-    background-position-y: initial;
-    background-size: initial;
-    background-repeat-x: initial;
-    background-repeat-y: initial;
-    background-attachment: initial;
-    background-origin: initial;
-    background-clip: initial;
-    background-color: rgb(239, 239, 239);
-    border-color: #efefef;
-    border-top-color: rgb(239, 239, 239);
-    border-right-color: rgb(239, 239, 239);
-    border-bottom-color: rgb(239, 239, 239);
-    border-left-color: rgb(239, 239, 239);
-}
-
-.chbox {
-    margin-left: 0;
-}
-
-.chbox {
-    overflow: hidden;
-    padding: 5px 5px;
-    border: 1px solid #333;
-    font-size: 24px;
-    margin: 0 5px;
-    margin-bottom: 5px;
-    position: relative;
-    border-radius: 5px;
-}
-
-a img {
-    /* vertical-align: top; */
-    width: 100%;
-    height: auto;
-    top: 0;
-    position: absolute;
-}
-
-.wapper {
-    position: sticky;
-    /* ヘッダーを固定する */
-    top: 0;
-    /* 上部から配置の基準位置を決める */
-    left: 0;
-    /* 左から配置の基準位置を決める */
-}
-
-.bs {
-    float: left;
-    width: 170px;
-}
-
-@media screen and (max-width: 1000px) {
-    .bs {
-        float: left;
-        width: 20%;
-    }
-}
-
-@media screen and (max-width: 900px) {
-    .bs {
-        float: left;
-        width: 25%;
-    }
-}
-
-.bsx {
-    position: relative;
-    overflow: hidden;
-    margin: 10px 7px;
-    transition: all .2s;
-    -webkit-transition: all .2s;
-    -moz-transition: all .2s;
-}
-
-.limit {
-    padding: 137% 0 0;
-    position: relative;
-    overflow: hidden;
-    background: #f6f6f6;;
-    border-radius: 3px;
-}
-
-
-.bigor {
-    height: 40px;
-}
-
-.tt {
-    font-size: .95em;
-    margin: 8px 0;
-    margin-bottom: 5px;
-    font-weight: 500;
-    line-height: 19px;
-    text-align: left;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-}
-
-.UpdateStatus {
-    position: absolute;
-    top: 18px;
-    left: -20px;
-    line-height: normal;
-    color: #fff;
-    text-transform: uppercase;
-    font-weight: 700;
-    z-index: 1;
-    padding: 2px 18px;
-    font-size: 9px;
-    background: #de3b3b;
-    -ms-transform: rotate(-45deg);
-    -webkit-transform: rotate(-45deg);
-    transform: rotate(-45deg);
-}
-        </style>
+        <link rel="stylesheet" href="public/Books_type.css">
     </head>
     <body>
         <div class="HeaderBook">
@@ -172,19 +22,17 @@ a img {
             <div class="wapper">
                 % for book in books:
                 <div class="bs">
-                    <div class="bsx">
+                    <div class="thumbnail-list">
                         <a href="${book["HREF"]}?TOP=1">
-                            <div class="limit">
+                            <div class="thumbnail">
                                 % if book["FLAG"] == 0:
                                 <span class="UpdateStatus">Completed</span>
                                 % elif book["FLAG"] == 2:
                                 <span class="UpdateStatus">&nbsp;&nbsp;Stoped&nbsp;&nbsp;&nbsp;</span>
                                 % endif
-                                <img src="${book["SRC"]}" width="200" height="auto">
+                                <img src="${book["SRC"]}">
                             </div>
-                            <div class="bigor">
-                                <div class="tt">${book["TITLE"]}</div>
-                            </div>
+                            <div class="title">${book["TITLE"]}</div>
                         </a>
                     </div>
                 </div>

@@ -1,197 +1,11 @@
 <html xmlns="https://www.w3.org/1999/xhtml" lang="en-US">
     <head>
         <meta charset="utf-8">
+        <meta name="viewport"
+              content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
         <meta name="referrer" content="no-referrer">
-        <style>
-/* スクロールバーを非表示 */
-/* WebKitベースのブラウザのスクロールバーを非表示にする */
-::-webkit-scrollbar {
-    width: 0;
-    background: transparent;
-}
-
-/* Firefoxのスクロールバーを非表示にする */
-html {
-  scrollbar-width: none;
-}
-
-/* htmlで使用するフォントを指定 */
-html {
-    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
-}
-
-.HeaderPage {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 42px;
-    background-color: #31a9ee;
-}
-
-.BodyPage {
-    position: fixed;
-    top: 0;
-    left: 0;
-    margin-top: 42px; /* 上の空白を指定 */
-    max-height: calc(100% - 42px);
-    overflow-y: auto;
-    width: 100%;
-}
-
-.header {
-    display 
-    width: 100%;
-    color: #000000;
-    font-size: 24px;
-    border-radius: 5px;
-    border: 3px solid #333;
-}
-
-.no-underline {
-  text-decoration: none;
-}
-
-.wrapper {
-    display: flex;
-}
-
-.BookInfo {
-    /*左固定記述*/
-    position: -webkit-sticky;    /*Safari用*/
-    position: sticky;    /* ヘッダーを固定する */
-    top: 0;    /* 上部から配置の基準位置を決める */
-    left: 0;    /* 左から配置の基準位置を決める */
-    width: 40%;    /* 横幅を指定する */
-    height: 100%;    /* 高さを指定する */
-    padding: 10px;    /* 余白を指定する(上下左右) */
-    background-color: #31a9ee;    /* 背景色を指定する */
-    color: #000000;    /* フォントの色を指定する */
-}
-
-.ChapterList {
-    /*右固定記述*/
-    position: -webkit-sticky;    /*Safari用*/
-    position: sticky;    /* ヘッダーを固定する */
-    top: 0;    /* 上部から配置の基準位置を決める */
-    left: 0;    /* 左から配置の基準位置を決める */
-    width: 60%;    /* 横幅を指定する */
-    height: 100%;    /* 高さを指定する */
-    padding: 0 10px 0 10px;    /* 余白を指定する(上下左右) */
-    background-color: #31a9ee;    /* 背景色を指定する */
-    color: #000000;    /* フォントの色を指定する */
-}
-
-.chbox {
-    background-color: rgb(239, 239, 239);
-}
-
-.chbox {
-    margin-left: 0;
-}
-
-.chbox {
-    padding: 2px 10px;
-    border: 1px solid #333;
-    margin-bottom: 3px;
-    border-radius: 5px;
-}
-
-.title {
-    padding: 5px 10px;
-    border: 1px solid #333;
-    font-size: 24px;
-    margin-bottom: 5px;
-    border-radius: 5px;
-    background-color: rgb(239, 239, 239);
-}
-
-.clstyle {
-    padding: 0;
-    list-style-type: none;
-}
-
-.eph-num {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-}
-
-span.chapternum {
-    font-size: 24px;
-}
-
-span.chapterdate {
-    font-size: 18px;
-}
-        </style>
-        <script type="text/javascript">
-            /* クエリパラメータを取得する関数 */
-            function getQueryParam(name) {
-                var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
-                    results = regex.exec(window.location.href);
-                if (!results) return null;
-                if (!results[2]) return '';
-                return decodeURIComponent(results[2].replace(/\+/g, ' '));
-            }
-
-            function returnBookList(url) {
-                var abcValue = getQueryParam('TOP');
-                if (abcValue === '1') {
-                    /* BookListから遷移してきた場合、前のページに戻る */
-                    window.history.back();
-                } else {
-                    /* 指定されたURLに移動する */
-                    abcValue = getQueryParam('MARK');
-                    if (abcValue === '1') {
-                        window.location.href = '../../BooksMark.html';
-                    } else {
-                        window.location.href = url;
-                    }
-                }
-                /* デフォルトのaタグの動作を停止する */
-                return false;
-            }
-
-            function returnChapter(url) {
-                var abcValue = getQueryParam('MARK');
-                if (abcValue === '1') {
-                    window.location.href = url + '?MARK=1';
-                } else {
-                    window.location.href = url;
-                }
-                /* デフォルトのaタグの動作を停止する */
-                return false;
-            }
-
-            function handleClick() {
-                let checkbox = document.getElementById('MarkCheckbox');
-                let marks = localStorage.getItem("CHAPTER_MARKER");
-                if (marks != null) {
-                    marks = JSON.parse(marks);
-                } else {
-                    marks = {}
-                }
-
-                if (checkbox.checked) {
-                    let regex = new RegExp('([^/]*/[^/]*/[^/?]*)[^/]*$'),
-                        results = regex.exec(window.location.href);
-                    if (!results || !results[1]) {
-                        url = '';
-                    } else {
-                        url = results[1];
-                    }
-
-                    marks["${book_key}"] = {"title": "${title}", "thumb": "${thumb}", "url": url + '?TOP=1&MARK=1'};
-                    localStorage.setItem("CHAPTER_MARKER", JSON.stringify(marks));
-                } else {
-                    if (marks != null && "${book_key}" in marks) {
-                        delete marks["${book_key}"];
-                        localStorage.setItem("CHAPTER_MARKER", JSON.stringify(marks));
-                    }
-                }
-            };
-        </script>
+        <link rel="stylesheet" href="../../public/Chapter_top.css">
+        <script src="../../public/Chapter_top.js"></script>
     </head>
     <body>
         <div class="HeaderPage">
@@ -204,7 +18,7 @@ span.chapterdate {
         <div class="BodyPage">
             <div class="wrapper">
                 <div class="BookInfo">
-                    <img src="${thumb}" width="80%">
+                    <img src="${thumb}" class="thumbnail">
                     <br>
                     <div>
                         <span class="title">${title}</span>
@@ -236,45 +50,6 @@ span.chapterdate {
                 </div>
             </div>
         </div>
-        <%doc>
-        ローカルストレージからキー=book_keyで情報を取得
-        </%doc>
-        <script type="text/javascript">
-            var items = localStorage.getItem("CHAPTER_NUMBER");
-            if (items != null && items !== "") {
-                items = JSON.parse(items);
-                if ("${book_key}" in items && "chapter" in items["${book_key}"]) {
-                    var color = ["#40F0B0","#60D090","#80B070","#A09050"];
-                    var c = 0;
-                    for (const item of items["${book_key}"]["chapter"].split(' ')) {
-                        var tags = document.getElementsByClassName("type-" + item);
-                        len = tags.length|0;
-                        for (i = 0; i < len; i = i + 1) {
-                            tags[i].style.background = color[c];
-                        }
-                        c++;
-                        if (c > color.length) {
-                            break;
-                        }
-                    }
-                }
-            }
-            var checkbox = document.getElementById('MarkCheckbox');
-            var marks = localStorage.getItem("CHAPTER_MARKER");
-            if (marks != null && marks != "") {
-                marks = JSON.parse(marks);
-
-                if ("${book_key}" in marks) {
-                    /* チェックボックスをチェック */
-                    checkbox.checked = true;
-                } else {
-                    /* チェックボックスのチェックを外す */
-                    checkbox.checked = false;
-                }
-            } else {
-                marks = {}
-            }
-
-        </script>
+        <script type="text/javascript">loadChapterKey();</script>
     </body>
 </html>

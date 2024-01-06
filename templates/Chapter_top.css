@@ -1,0 +1,168 @@
+/* スクロールバーを非表示 */
+/* WebKitベースのブラウザのスクロールバーを非表示にする */
+::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
+}
+
+/* Firefoxのスクロールバーを非表示にする */
+html {
+    scrollbar-width: none;
+}
+
+/* htmlで使用するフォントを指定 */
+html {
+    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
+}
+
+.HeaderPage {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2.2em;
+    background-color: #31a9ee;
+}
+
+.header {
+    width: calc(100% - 5px);
+    color: #000000;
+    font-size: 1.2em;
+    border-radius: 5px;
+    border: 3px solid #333;
+}
+
+.no-underline {
+    text-decoration: none;
+}
+
+.BodyPage {
+    position: fixed;
+    top: 0;
+    left: 0;
+    margin-top: 2.2em;
+    /* 上の空白を指定 */
+    max-height: calc(100% - 2.2em);
+    overflow-y: auto;
+    width: 100%;
+}
+
+.wrapper {
+    display: flex;
+}
+
+.BookInfo {
+    /* 左固定記述 */
+    position: -webkit-sticky;
+    /* Safari用 */
+    position: sticky;
+    /* ヘッダーを固定する */
+    top: 0;
+    /* 上部から配置の基準位置を決める */
+    left: 0;
+    /* 左から配置の基準位置を決める */
+    width: 40%;
+    /* 横幅を指定する */
+    height: 100%;
+    /* 高さを指定する */
+    padding: 10px;
+    /* 余白を指定する(上下左右) */
+    background-color: #31a9ee;
+    /* 背景色を指定する */
+    color: #000000;
+    /* フォントの色を指定する */
+}
+
+.ChapterList {
+    /*右固定記述*/
+    position: -webkit-sticky;
+    /*Safari用*/
+    position: sticky;
+    /* ヘッダーを固定する */
+    top: 0;
+    /* 上部から配置の基準位置を決める */
+    left: 0;
+    /* 左から配置の基準位置を決める */
+    width: 60%;
+    /* 横幅を指定する */
+    height: 100%;
+    /* 高さを指定する */
+    padding: 0 10px 0 10px;
+    /* 余白を指定する(上下左右) */
+    background-color: #31a9ee;
+    /* 背景色を指定する */
+    color: #000000;
+    /* フォントの色を指定する */
+}
+
+.chbox {
+    background-color: rgb(239, 239, 239);
+}
+
+.chbox {
+    margin-left: 0;
+}
+
+.chbox {
+    padding: 0.2em 0.5em;
+    border: 1px solid #333;
+    margin-bottom: 3px;
+    border-radius: 5px;
+}
+
+/* スマートフォン向けのスタイル */
+@media (max-device-width: 599px) {
+    .chbox {
+        padding: 0.1em 0.2em;
+    }
+}
+
+.thumbnail {
+    width: 100%;
+}
+
+.title {
+    padding: 0.1em 0.2em;
+    border: 1px solid #333;
+    font-size: 1em;
+    margin-bottom: 5px;
+    border-radius: 5px;
+    background-color: rgb(239, 239, 239);
+}
+
+/* スマートフォン向けのスタイル */
+@media (max-device-width: 599px) {
+    .title {
+        font-size: 0.8em;
+    }
+}
+
+.clstyle {
+    padding: 0;
+    list-style-type: none;
+}
+
+.eph-num {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+}
+
+span.chapternum {
+    font-size: 1.8em;
+}
+
+span.chapterdate {
+    font-size: 1.4em;
+}
+
+/* スマートフォン向けのスタイル */
+@media (max-device-width: 599px) {
+    span.chapternum {
+        font-size: 0.7em;
+    }
+
+    span.chapterdate {
+        font-size: 0.3em;
+    }
+}

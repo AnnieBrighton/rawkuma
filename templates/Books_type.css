@@ -1,0 +1,196 @@
+/* 全体のスタイリング */
+body,
+html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+/* スクロールバーを非表示 */
+/* WebKitベースのブラウザのスクロールバーを非表示にする */
+::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
+}
+
+/* Firefoxのスクロールバーを非表示にする */
+html {
+    scrollbar-width: none;
+}
+
+body {
+    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
+}
+
+.HeaderBook {
+    position: fixed;
+    /* ヘッダーを固定する */
+    top: 0;
+    /* 上部から配置の基準位置を決める */
+    left: 0;
+    /* 左から配置の基準位置を決める */
+    width: calc(100% - 0.6em);
+    /* ヘッダーの横幅を指定する */
+    height: 2.7em;
+    /* ヘッダーの高さを指定する */
+    padding: 0.3em;
+    /* ヘッダーの余白を指定する(上下左右) */
+    background-color: #31a9ee;
+    /* ヘッダーの背景色を指定する */
+    color: #000000;
+    /* フォントの色を指定する */
+    z-index: 999;
+}
+
+/* スマートフォン向けのスタイル */
+@media (max-device-width: 599px) {
+    .HeaderBook {
+        height: 4.5em;
+        /* ヘッダーの高さを指定する */
+    }
+}
+
+.chbox {
+    background: #efefef;
+    background-image: initial;
+    background-position-x: initial;
+    background-position-y: initial;
+    background-size: initial;
+    background-repeat-x: initial;
+    background-repeat-y: initial;
+    background-attachment: initial;
+    background-origin: initial;
+    background-clip: initial;
+    background-color: rgb(239, 239, 239);
+    border-color: #efefef;
+    border-top-color: rgb(239, 239, 239);
+    border-right-color: rgb(239, 239, 239);
+    border-bottom-color: rgb(239, 239, 239);
+    border-left-color: rgb(239, 239, 239);
+}
+
+.chbox {
+    margin-left: 0;
+}
+
+.chbox {
+    overflow: hidden;
+    padding: 5px 5px;
+    border: 1px solid #333;
+    font-size: 1.2em;
+    /* margin: 0 5px; */
+    /* margin-bottom: 5px; */
+    /* position: relative; */
+    /* border-radius: 5px; */
+}
+
+.BookList {
+    margin-top: 3.1em; /* 上の空白を指定 */
+    height: auto;
+}
+
+/* スマートフォン向けのスタイル */
+@media (max-width: 599px) {
+    .BookList {
+        margin-top: 4.7em; /* 上の空白を指定 */
+    }
+}
+
+a img {
+    /* vertical-align: top; */
+    width: 100%;
+    height: auto;
+    top: 0;
+    position: absolute;
+}
+
+.wapper {
+    position: sticky;
+    /* ヘッダーを固定する */
+    top: 0;
+    /* 上部から配置の基準位置を決める */
+    left: 0;
+    /* 左から配置の基準位置を決める */
+}
+
+.bs {
+    float: left;
+    width: 9.2em;
+}
+
+/* 横幅が1400px以下 横幅の1/7 */
+@media screen and (max-device-width: 1400px) {
+    .bs {
+        width: 14.28%;
+    }
+}
+
+/* 横幅が1024px以下 横幅の1/5 */
+@media screen and (max-device-width: 1024px) {
+    .bs {
+        width: 20%;
+    }
+}
+
+/* 横幅が770px以下 横幅の1/4 */
+@media screen and (max-device-width: 770px) {
+    .bs {
+        width: 25%;
+    }
+}
+
+/* 横幅が599px以下 横幅の1/3 */
+@media screen and (max-device-width: 599px) {
+    .bs {
+        width: 33%;
+    }
+}
+
+.thumbnail-list {
+    position: relative;
+    overflow: hidden;
+    margin: 10px 7px;
+    transition: all .2s;
+    -webkit-transition: all .2s;
+    -moz-transition: all .2s;
+}
+
+.thumbnail {
+    padding: 137% 0 0;
+    position: relative;
+    overflow: hidden;
+    background: #f6f6f6;;
+    border-radius: 3px;
+}
+
+.title {
+    height: 2.4em;
+    font-size: .95em;
+    margin: 8px 0;
+    margin-bottom: 5px;
+    font-weight: 500;
+    line-height: 1.2em;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.UpdateStatus {
+    position: absolute;
+    top: 1.2em;
+    left: -1.4em;
+    line-height: normal;
+    color: #fff;
+    text-transform: uppercase;
+    font-weight: 700;
+    z-index: 1;
+    padding: 2px 18px;
+    font-size: 0.8em;
+    background: #de3b3b;
+    -ms-transform: rotate(-45deg);
+    -webkit-transform: rotate(-45deg);
+    transform: rotate(-45deg);
+}

@@ -1,200 +1,25 @@
 <html xmlns="https://www.w3.org/1999/xhtml" lang="en-US">
     <head>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
         <meta name="referrer" content="no-referrer">
-        <style>
-/* スクロールバーを非表示 */
-/* WebKitベースのブラウザのスクロールバーを非表示にする */
-::-webkit-scrollbar {
-    width: 0;
-    background: transparent;
-}
-
-/* Firefoxのスクロールバーを非表示にする */
-html {
-  scrollbar-width: none;
-}
-
-body {
-    display: inline;
-    font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
-}
-
-.HeaderPage {
-    position: sticky;    /* ヘッダーを固定する */
-    top: 0;    /* 上部から配置の基準位置を決める */
-    left: 0;    /* 左から配置の基準位置を決める */
-    width: calc(100vw - 12px); /* 横幅を指定する */
-    /* height: 15px; */    /* 高さを指定する */
-    padding: 2px;    /* 余白を指定する(上下左右) */
-    background-color: #31a9ee;    /* 背景色を指定する */
-    color: #000000;    /* フォントの色を指定する */
-    display: flex;
-    font-size: 24px;
-    justify-content: space-between;
-}
-
-.Contents {
-    width: calc(100vw - 12px);
-    display: flex;
-    flex-direction: row-reverse;
-    flex-wrap: wrap;
-    justify-content: center;
-    pointer-events: none;
-}
-
-.Contents>div {
-    display: flex;
-    width: 100%;
-    height: auto;
-    flex-wrap: wrap;
-    flex-direction: row-reverse;
-    justify-content: center;
-    pointer-events: none;
-}
-
-.Contents>div>img {
-    width: auto;
-    height: 95vh;
-    margin-top: 2vh;
-    margin-bottom: 2vh;
-    pointer-events: none;
-    max-width: 100vw;
-}
-
-.Footer {
-    width: calc(100vw - 12px);
-    border-radius: 5px;
-    border: 3px solid #333;
-    background-color: #31a9ee;
-    padding: 3px;
-    margin: 3px;
-    font-size: 24px;
-}
-
-.no-underline {
-  text-decoration: none;
-}
-
-@media screen and (max-width: 1024px) and (orientation: portrait) {
-    .Contents{
-display: block;
-        width: 100%;
-        display:flex;
-pointer-events: none;
-    }
-    .Contents>div{
-        display: block;
-        width: 100%;
-        height: 100%;
-pointer-events: none;
-    }
-    .Contents>div>img{
-        margin-top: 0;
-        margin-bottom: 0;
-        width: auto;
-        height: 95vh;
-        display: block;
-        margin:auto;
-    pointer-events: none;
-    }
-}
-
-div.title {
-    white-space: nowrap;    /* 横幅のMAXに達しても改行しない */
-    overflow: hidden;    /* ハミ出した部分を隠す */
-    text-overflow: ellipsis;    /* 「…」と省略 */
-    margin-right: auto;
-    margin-left: 10px;
-    font-size: 24px;
-    line-height: 1;
-}
-
-div.Next {
-    margin: 0 0 0 10px;
-    white-space: nowrap;
-    font-size: 24px;
-    line-height: 1;
-    border-radius: 5px;
-    border: 1px solid #333;
-}
-
-div.select-chapter {
-    margin-right: 0px;
-    margin-left: 0px;
-}
-
-.selecter {
-    font-size: 14px;
-}
-
-div.Prev {
-    margin: 0 10px 0 0;
-    white-space: nowrap;
-    font-size: 24px;
-    line-height: 1;
-    border-radius: 5px;
-    border: 1px solid #333;
-}
-        </style>
-        <script type="text/javascript">
-            /* クエリパラメータを取得する関数 */
-            function getQueryParam(name) {
-                var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
-                    results = regex.exec(window.location.href);
-                if (!results) return null;
-                if (!results[2]) return '';
-                return decodeURIComponent(results[2].replace(/\+/g, ' '));
-            }
-
-            function returnBookList(url) {
-                var abcValue = getQueryParam('MARK');
-                if (abcValue === '1') {
-                    window.location.href = url + "?MARK=1";
-                } else {
-                    window.location.href = url;
-                }
-                /* デフォルトのaタグの動作を停止する */
-                return false;
-            }
-
-            function returnChapter(url) {
-                var abcValue = getQueryParam('MARK');
-                if (abcValue === '1') {
-                    window.location.href = url + '?MARK=1';
-                } else {
-                    window.location.href = url;
-                }
-                /* デフォルトのaタグの動作を停止する */
-                return false;
-            }
-        </script>
+        <link rel="stylesheet" href="../../public/Chapter.css">
+        <script src="../../public/Chapter.js"></script>
     </head>
     <body>
         <div class="HeaderPage">
             <div class="Prev">
-                <a href="#"
-                   onclick="return returnChapter('${prev["HREF"]}');"
+                <a onclick="return returnChapter('${prev["HREF"]}');"
+                   href="#"
                    class="no-underline">
                     <div>${prev["NUM"]}</div>
                 </a>
             </div>
-            <div class="select-chapter">
-                <select onChange="return returnChapter(value);" class="selecter">
-                    % for chapter in chapters:
-                    % if chapter["KEY"] == chapter_key:
-                    <option value="${chapter["HREF"]}" selected>${chapter["NUM"]}</option>
-                    % else:
-                    <option value="${chapter["HREF"]}">${chapter["NUM"]}</option>
-                    % endif
-                    % endfor
-                </select>
-            </div>
-            <div class="title">
-                <a href="#"
-                   onclick="return returnBookList('${chapter_top}');"
-                   class="no-underline"><span>${title}</span></a>
-            </div>
+            <a href="#"
+                onclick="return returnBookList('${chapter_top}');"
+                class="no-underline title">
+                <div>${title}</div>
+            </a>
             <div class="Next">
                 <a href="#"
                    onclick="return returnChapter('${next["HREF"]}');"
@@ -203,78 +28,56 @@ div.Prev {
                 </a>
             </div>
         </div>
-        <div id="content" class="Contents">
-            <div>
-                % for i, page in enumerate(pages):
-                % if i > 2:
-                <img loading="lazy" class="noContextMenu" src="${page}">
-                % else:
-                <img class="noContextMenu" src="${page}">
-                % endif
-                % endfor
+        <div id="image-viewer">
+            <div class="img-center">
+                <img src="#" class="noContextMenu" style="divisibilitysplay:visible;">
+                <div class="last-page" style="visibility:hidden;">
+                    <a href="#"
+                    onclick="return returnChapter('${next["HREF"]}');"
+                    class="no-underline">
+                        <div>${next["NUM"]}</div>
+                    </a>
+                </div>
+            </div>
+            <div class="img-left">
+                <img src="#" class="noContextMenu" style="visibility:visible;">
+                <div class="last-page" style="visibility:hidden;">
+                    <a href="#"
+                    onclick="return returnChapter('${next["HREF"]}');"
+                    class="no-underline">
+                        <div>${next["NUM"]}</div>
+                    </a>
+                </div>
+            </div>
+            <div class="img-right">
+                <img src="#" class="noContextMenu" style="visibility:visible;">
+                <div class="last-page" style="visibility:hidden;">
+                    <a href="#"
+                    onclick="return returnChapter('${next["HREF"]}');"
+                    class="no-underline">
+                        <div>${next["NUM"]}</div>
+                    </a>
+                </div>
             </div>
         </div>
-        <div class="Footer">
-            <a href="#"
-               onclick="return returnChapter('${next["HREF"]}');"
-               class="no-underline">
-                <div>${next["NUM"]}</div>
-            </a>
-        </div>
+        <table id="image-urls" style="display:none;">
+            <tr>
+                % for i, page in enumerate(pages):
+                <td>${page}</td>
+                % endfor
+            </tr>
+        </table>
         <script type="text/javascript">
-            <%doc>
-            現在閲覧中のチャプターをキーに保存する。
-            </%doc>
-            var items = localStorage.getItem("CHAPTER_NUMBER");
-            if (items == null || items === "") {
-                items = {};
-            } else {
-                items = JSON.parse(items);
-            }
-
-            var before_chapter = "${chapter_key.replace('.', '-')}";
-            if ("${book_key}" in items && "chapter" in items["${book_key}"] && items["${book_key}"]["chapter"] != null) {
-                let c = 1;
-                for (const item of items["${book_key}"]["chapter"].split(' ')) {
-                    if (before_chapter != item && c < 3) {
-                        before_chapter += ' ' + item;
-                    }
-                    c++;
-                }
-                items["${book_key}"]["chapter"] = before_chapter;
-            } else {
-                let minKey = null;
-                let minValue = 999999999;
-                let maxValue = 0;
-
-                for (let key in items) {
-                    if (items[key].number < minValue) {
-                        minValue = items[key].number;
-                        minKey = key;
-                    }
-                    if (items[key].number > maxValue) {
-                        maxValue = items[key].number;
-                    }
-                }
-                if (Object.keys(items).length > 300) {
-                    delete items[minKey];
-                }
-                items["${book_key}"] = {"number": maxValue + 1, "chapter": before_chapter};
-            }
-
-            localStorage.setItem("CHAPTER_NUMBER", JSON.stringify(items));
-
-            <%doc>
-            画像要素に対しては、右クリック・長押しでメニューを出さない。
-            </%doc>
-            var noContextMenuByClass = document.getElementsByClassName('noContextMenu');
-            for (var i=0, len=noContextMenuByClass.length|0; i<len; i=i+1|0) {
-                noContextMenuByClass[i].addEventListener('contextmenu', e => {
+            /* 画像要素に対しては、右クリック・長押しでメニューを出さない。 */
+            var noContextMenu = document.getElementsByClassName('noContextMenu');
+            for (var i=0, len=noContextMenu.length|0; i<len; i=i+1|0) {
+                noContextMenu[i].addEventListener('contextmenu', e => {
                     e.preventDefault();
                     e.stopPropagation();
                     return false;
                 });
             }
+            saveChapterKey();
         </script>
     </body>
 </html>
