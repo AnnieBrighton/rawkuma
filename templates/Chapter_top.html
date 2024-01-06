@@ -25,7 +25,9 @@
                     </div>
                     <div>
                         <label>
-                            <input type="checkbox" id="MarkCheckbox" onclick="handleClick()">
+                            <input type="checkbox"
+                                   id="MarkCheckbox"
+                                   onclick="handleClick('${book_key}', '${title}', '${thumb}')">
                             マーク
                         </label>
                     </div>
@@ -50,6 +52,6 @@
                 </div>
             </div>
         </div>
-        <script type="text/javascript">loadChapterKey();</script>
+        <script type="text/javascript">loadChapterKey("${book_key}");</script>
     </body>
 </html>

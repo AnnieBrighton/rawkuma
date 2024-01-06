@@ -36,7 +36,7 @@ function returnChapter(url) {
     return false;
 }
 
-function handleClick() {
+function handleClick(book_key, title, thumb) {
     let checkbox = document.getElementById('MarkCheckbox');
     let marks = localStorage.getItem("CHAPTER_MARKER");
     if (marks != null) {
@@ -54,25 +54,25 @@ function handleClick() {
             url = results[1];
         }
 
-        marks["${book_key}"] = { "title": "${title}", "thumb": "${thumb}", "url": url + '?TOP=1&MARK=1' };
+        marks[book_key] = { "title": title, "thumb": thumb, "url": url + '?TOP=1&MARK=1' };
         localStorage.setItem("CHAPTER_MARKER", JSON.stringify(marks));
     } else {
-        if (marks != null && "${book_key}" in marks) {
-            delete marks["${book_key}"];
+        if (marks != null && book_key in marks) {
+            delete marks[book_key];
             localStorage.setItem("CHAPTER_MARKER", JSON.stringify(marks));
         }
     }
 }
 
 /* ローカルストレージからキー=book_keyで情報を取得 */
-function loadChapterKey() {
+function loadChapterKey(book_key) {
     var items = localStorage.getItem("CHAPTER_NUMBER");
     if (items != null && items !== "") {
         items = JSON.parse(items);
-        if ("${book_key}" in items && "chapter" in items["${book_key}"]) {
+        if (book_key in items && "chapter" in items[book_key]) {
             var color = ["#40F0B0", "#60D090", "#80B070", "#A09050"];
             var c = 0;
-            for (const item of items["${book_key}"]["chapter"].split(' ')) {
+            for (const item of items[book_key]["chapter"].split(' ')) {
                 var tags = document.getElementsByClassName("type-" + item);
                 len = tags.length | 0;
                 for (i = 0; i < len; i = i + 1) {
@@ -90,7 +90,7 @@ function loadChapterKey() {
     if (marks != null && marks != "") {
         marks = JSON.parse(marks);
 
-        if ("${book_key}" in marks) {
+        if (book_key in marks) {
             /* チェックボックスをチェック */
             checkbox.checked = true;
         } else {

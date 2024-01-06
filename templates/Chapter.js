@@ -29,7 +29,7 @@ function returnChapter(url) {
     return false;
 }
 
-function saveChapterKey() {
+function saveChapterKey(book_key, chapter_key) {
     /* 現在閲覧中のチャプターをキーに保存する。 */
     var items = localStorage.getItem("CHAPTER_NUMBER");
     if (items == null || items === "") {
@@ -38,16 +38,16 @@ function saveChapterKey() {
         items = JSON.parse(items);
     }
 
-    var before_chapter = "${chapter_key.replace('.', '-')}";
-    if ("${book_key}" in items && "chapter" in items["${book_key}"] && items["${book_key}"]["chapter"] != null) {
+    var before_chapter = chapter_key;
+    if (book_key in items && "chapter" in items[book_key] && items[book_key]["chapter"] != null) {
         let c = 1;
-        for (const item of items["${book_key}"]["chapter"].split(' ')) {
+        for (const item of items[book_key]["chapter"].split(' ')) {
             if (before_chapter != item && c < 3) {
                 before_chapter += ' ' + item;
             }
             c++;
         }
-        items["${book_key}"]["chapter"] = before_chapter;
+        items[book_key]["chapter"] = before_chapter;
     } else {
         let minKey = null;
         let minValue = 999999999;
@@ -65,7 +65,7 @@ function saveChapterKey() {
         if (Object.keys(items).length > 300) {
             delete items[minKey];
         }
-        items["${book_key}"] = { "number": maxValue + 1, "chapter": before_chapter };
+        items[book_key] = { "number": maxValue + 1, "chapter": before_chapter };
     }
 
     localStorage.setItem("CHAPTER_NUMBER", JSON.stringify(items));
