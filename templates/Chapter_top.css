@@ -25,11 +25,11 @@ html {
 }
 
 .header {
-    width: calc(100% - 5px);
+    width: calc(100% - 0.7em);
     color: #000000;
     font-size: 1.2em;
-    border-radius: 5px;
-    border: 3px solid #333;
+    border-radius: 0.7em;
+    border: 0.1em solid #333;
 }
 
 .no-underline {
@@ -87,7 +87,7 @@ html {
     /* 横幅を指定する */
     height: 100%;
     /* 高さを指定する */
-    padding: 0 10px 0 10px;
+    padding: 0 0.6em;
     /* 余白を指定する(上下左右) */
     background-color: #31a9ee;
     /* 背景色を指定する */
@@ -105,15 +105,20 @@ html {
 
 .chbox {
     padding: 0.2em 0.5em;
-    border: 1px solid #333;
-    margin-bottom: 3px;
-    border-radius: 5px;
+    border: 0.1em solid #333;
+    margin-bottom: 0.2em;
+    border-radius: 0.7em;
 }
 
 /* スマートフォン向けのスタイル */
 @media (max-device-width: 599px) {
     .chbox {
         padding: 0.1em 0.2em;
+    }
+
+    .ChapterList {
+        padding: 0 0.2em;
+        /* 余白を指定する(上下左右) */
     }
 }
 
@@ -123,10 +128,10 @@ html {
 
 .title {
     padding: 0.1em 0.2em;
-    border: 1px solid #333;
+    border: 0.1em solid #333;
     font-size: 1em;
-    margin-bottom: 5px;
-    border-radius: 5px;
+    margin-bottom: 0.2em;
+    border-radius: 0.7em;
     background-color: rgb(239, 239, 239);
 }
 
@@ -149,11 +154,11 @@ html {
 }
 
 span.chapternum {
-    font-size: 1.8em;
+    font-size: 1.3em;
 }
 
 span.chapterdate {
-    font-size: 1.4em;
+    font-size: 1.0em;
 }
 
 /* スマートフォン向けのスタイル */
