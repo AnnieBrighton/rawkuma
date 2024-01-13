@@ -20,9 +20,17 @@
         </div>
         <script type="text/javascript">
             window.onload = function() {
-                let marks = localStorage.getItem("CHAPTER_MARKER");
-                if (marks != null && marks != "") {
-                    marks = JSON.parse(marks);
+                let marker_list = localStorage.getItem("CHAPTER_MARKER");
+                if (marker_list != null && marker_list != "") {
+                    marker_list = JSON.parse(marker_list);
+
+                    /* ①要素を変数保持 */
+                    let marks = Object.keys(marker_list).map(function(key) {
+                        return marker_list[key];
+                    /* ②dateでソート */
+                    }).sort(function(a, b) {
+                        return (a.update < b.update) ? -1 : 1;  /* オブジェクトの昇順ソート */
+                    });                    
 
                     for (let key in marks) {
                         let title = marks[key]["title"];

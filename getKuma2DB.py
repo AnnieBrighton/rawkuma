@@ -142,28 +142,6 @@ class getKuma2DB:
                 )
                 self.db.commit()
 
-                # チャプター格納ディレクトリ作成
-                os.makedirs(
-                    os.path.join(self.BASE_PATH, "img{TYPE}".format(TYPE=type.upper())),
-                    exist_ok=True,
-                )
-
-                #
-                olddir = os.path.join(
-                    self.BASE_PATH,
-                    "img{TYPE}".format(TYPE=result[0][DB.BOOK_TYPE]),
-                    result[0][DB.BOOK_KEY],
-                )
-                if os.path.isdir(olddir):
-                    newdir = os.path.join(
-                        self.BASE_PATH,
-                        "img{TYPE}".format(TYPE=type.upper()),
-                        result[0][DB.BOOK_KEY],
-                    )
-
-                    logging.info("{OLD} -> {NEW}".format(OLD=olddir, NEW=newdir))
-                    os.rename(olddir, newdir)
-
             else:
                 logging.info("{URL} はすでに登録済み。".format(URL=url))
 

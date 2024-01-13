@@ -5,6 +5,7 @@ import os
 import sys
 from DB import DB
 import html
+import hashlib
 
 from urllib.parse import unquote
 from mako.template import Template
@@ -29,6 +30,9 @@ class MkKuma2Html:
         self.lookup = TemplateLookup(
             filesystem_checks=False, directories=[self.path + "/templates"]
         )
+
+    def getHash(self, val) -> str:
+        return hashlib.md5(val.encode("utf-8")).hexdigest()[0:2]
 
     def tohtml(self) -> None:
         """HTML出力"""
@@ -70,7 +74,7 @@ class MkKuma2Html:
                 path = unquote(
                     os.path.join(
                         self.BASE_PATH,
-                        "img{TYPE}".format(TYPE=book[DB.BOOK_TYPE]),
+                        self.getHash(book[DB.BOOK_KEY]),
                         book[DB.BOOK_KEY],
                     )
                 )
@@ -114,7 +118,7 @@ class MkKuma2Html:
             "books": [
                 {
                     "HREF": os.path.join(
-                        "img{TYPE}".format(TYPE=book[DB.BOOK_TYPE]),
+                        self.getHash(book[DB.BOOK_KEY]),
                         book[DB.BOOK_KEY],
                         book[DB.BOOK_KEY] + ".html",
                     ),
@@ -240,9 +244,5 @@ class MkKuma2Html:
 #
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        url = sys.argv[1]
-
-        print(url)
-        kuma = MkKuma2Html()
-        kuma.tohtml()
+    kuma = MkKuma2Html()
+    kuma.tohtml()

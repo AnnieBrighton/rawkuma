@@ -36,6 +36,16 @@ function returnChapter(url) {
     return false;
 }
 
+function getDate() {
+    var now = new Date();
+    return ("0000" + now.getFullYear()).slice(-4) + "/" + // 年の取り出し
+            ("00" + (now.getMonth()+1)).slice(-2) + "/" +   // 月の取り出し
+            ("00" + now.getDate()).slice(-2) + " " +        // 日の取り出し        
+            ("00" + now.getHours()).slice(-2) + ":" +       // 時の取り出し
+            ("00" + now.getMinutes()).slice(-2) + ":" +     // 分の取り出し
+            ("00" + now.getSeconds()).slice(-2);            // 秒の取り出し
+}
+
 function handleClick(book_key, title, thumb) {
     let checkbox = document.getElementById('MarkCheckbox');
     let marks = localStorage.getItem("CHAPTER_MARKER");
@@ -54,7 +64,7 @@ function handleClick(book_key, title, thumb) {
             url = results[1];
         }
 
-        marks[book_key] = { "title": title, "thumb": thumb, "url": url + '?TOP=1&MARK=1' };
+        marks[book_key] = { "title": title, "thumb": thumb, "url": url + '?TOP=1&MARK=1', "update": getDate() };
         localStorage.setItem("CHAPTER_MARKER", JSON.stringify(marks));
     } else {
         if (marks != null && book_key in marks) {

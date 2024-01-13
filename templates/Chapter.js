@@ -29,6 +29,16 @@ function returnChapter(url) {
     return false;
 }
 
+function getDate() {
+    var now = new Date();
+    return ("0000" + now.getFullYear()).slice(-4) + "/" + // 年の取り出し
+        ("00" + (now.getMonth() + 1)).slice(-2) + "/" +   // 月の取り出し
+        ("00" + now.getDate()).slice(-2) + " " +        // 日の取り出し        
+        ("00" + now.getHours()).slice(-2) + ":" +       // 時の取り出し
+        ("00" + now.getMinutes()).slice(-2) + ":" +     // 分の取り出し
+        ("00" + now.getSeconds()).slice(-2);            // 秒の取り出し
+}
+
 function saveChapterKey(book_key, chapter_key) {
     /* 現在閲覧中のチャプターをキーに保存する。 */
     var items = localStorage.getItem("CHAPTER_NUMBER");
@@ -69,6 +79,16 @@ function saveChapterKey(book_key, chapter_key) {
     }
 
     localStorage.setItem("CHAPTER_NUMBER", JSON.stringify(items));
+
+    /* マーカー情報の更新時間を更新  */
+    var marks = localStorage.getItem("CHAPTER_MARKER");
+    if (marks != null && marks != "") {
+        marks = JSON.parse(marks);
+        if (book_key in marks) {
+            marks[book_key]["update"] = getDate();
+            localStorage.setItem("CHAPTER_MARKER", JSON.stringify(marks));
+        }
+    }
 }
 
 function updateProgressBar(progress) {
