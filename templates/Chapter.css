@@ -134,21 +134,6 @@ div.img-right {
     display: none;
 }
 
-/* レスポンシブデザイン: 縦横比に応じてスタイリングを変更 */
-@media (min-aspect-ratio: 3/2) {
-    div.img-left {
-        display: inline;
-    }
-
-    div.img-center {
-        display: none;
-    }
-
-    div.img-right {
-        display: inline;
-    }
-}
-
 div.last-page {
     position: absolute;
     /* テキストに絶対位置を設定 */

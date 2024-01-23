@@ -8,18 +8,23 @@ import aiochrome
 import asyncio
 
 
-class Chrome():
+class Chrome:
     """
     Chrome用ライブラリ
     """
-    user_dir = os.path.join(os.environ.get('TEMP', '/tmp'), 'google-chrome_{0:08d}'.format(os.getpid()))
+
+    user_dir = os.path.join(
+        os.environ.get("TEMP", "/tmp"), "google-chrome_{0:08d}".format(os.getpid())
+    )
 
     # chrome_app = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-    chrome_app = '/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary'
+    chrome_app = (
+        "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"
+    )
 
     def __init__(self, logging) -> None:
-        """ コンストラクタ """
-        logging.info('Chrome init')
+        """コンストラクタ"""
+        logging.info("Chrome init")
         self.logging = logging
         self.browser = None
         self.proc = None
@@ -33,20 +38,21 @@ class Chrome():
             pass
 
         opt = [self.chrome_app]
-        opt.append('--headless=new')
-        opt.append('--user-data-dir=' + self.user_dir)
+        opt.append("--headless=new")
+        opt.append("--user-data-dir=" + self.user_dir)
         # opt.append('--window-size=800,600')
-        opt.append('--window-size=1600,200')
-        opt.append('--no-first-run')
-        opt.append('--no-default-browser-check')
+        opt.append("--window-size=1600,200")
+        opt.append("--no-first-run")
+        opt.append("--no-default-browser-check")
 
-        opt.append('--remote-debugging-port=9222')
+        opt.append("--remote-debugging-port=9222")
         # opt.append('--blink-settings=imagesEnabled=false')
         # https://senablog.com/python-selenium-chrome-option/#
 
         self.proc = Popen(opt)
 
-        sleep(10)
+        # wait for loading
+        await asyncio.sleep(20)
 
         self.browser = aiochrome.Browser(url="http://127.0.0.1:9222")
 
@@ -71,7 +77,8 @@ class Chrome():
         self.proc.kill()
         self.proc.wait()
 
-        sleep(10)
+        # wait for loading
+        await asyncio.sleep(10)
         shutil.rmtree(self.user_dir)
 
     async def open_tab(self):
@@ -88,7 +95,7 @@ class Chrome():
         self.idling_tabs.append(tab)
 
 
-class ChromeTab():
+class ChromeTab:
     def __init__(self, browser) -> None:
         self.__browser = browser
         self.__tab = None
@@ -109,8 +116,8 @@ class ChromeTab():
         for _ in range(0, 10):
             try:
                 root = await self.__tab.DOM.getDocument()
-                HTML = await self.__tab.DOM.getOuterHTML(nodeId=root['root']['nodeId'])
-                return HTML['outerHTML']
+                HTML = await self.__tab.DOM.getOuterHTML(nodeId=root["root"]["nodeId"])
+                return HTML["outerHTML"]
             except aiochrome.exceptions.CallMethodException:
                 await asyncio.sleep(1)
         else:

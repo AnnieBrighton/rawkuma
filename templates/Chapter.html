@@ -65,7 +65,7 @@
         <table id="image-urls" style="display:none;">
             <tr>
                 % for i, page in enumerate(pages):
-                <td>${page}</td>
+                <td data-single=${page["SINGLE"]} data-url="${page["URL"]}"></td>
                 % endfor
             </tr>
         </table>

@@ -51,6 +51,7 @@ class MkKuma2Html:
                     DB.BOOK_KEY: None,
                     DB.TITLE: None,
                     DB.BOOK_TYPE: type,
+                    DB.BOOK_SINGLE: None,
                     DB.THUMB: None,
                     DB.USE_FLAG: None,
                 }
@@ -68,6 +69,7 @@ class MkKuma2Html:
                         DB.CHAPTER_URL: None,
                         DB.CHAPTER_NUM: None,
                         DB.CHAPTER_DATE: None,
+                        DB.CHAPTER_SINGLE: None,
                     }
                 )
 
@@ -196,6 +198,14 @@ class MkKuma2Html:
 
             pages = self.db.select_page(chapter[DB.CHAPTER_ID])
 
+            # 単ページから開始するか、
+            single_page_start = (
+                book[DB.BOOK_SINGLE] != 0 and chapter[DB.CHAPTER_SINGLE] is None
+            ) or (
+                chapter[DB.CHAPTER_SINGLE] != 0
+                and chapter[DB.CHAPTER_SINGLE] is not None
+            )
+
             data = {
                 "prev": {
                     "HREF": book[DB.BOOK_KEY] + "_" + prev[DB.CHAPTER_KEY] + ".html",
@@ -224,7 +234,19 @@ class MkKuma2Html:
                         chapters, key=lambda x: x[DB.CHAPTER_KEY], reverse=True
                     )
                 ],
-                "pages": [page["page_url"] for page in pages],
+                "pages": [
+                    {
+                        "URL": page[DB.PAGE_URL],
+                        "SINGLE": (
+                            (
+                                page[DB.PAGE_SINGLE] != 0
+                                and page[DB.PAGE_SINGLE] is not None
+                            )
+                            or (num == 0 and single_page_start)
+                        ),
+                    }
+                    for num, page in enumerate(pages)
+                ],
             }
 
             with open(

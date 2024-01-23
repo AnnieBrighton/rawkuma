@@ -8,6 +8,7 @@ class DB:
     BOOK_ID = "book_id"
     BOOK_KEY = "book_key"
     BOOK_TYPE = "book_type"
+    BOOK_SINGLE = "book_single"
     USE_FLAG = "use_flag"
     USE_FLAG_STOPED = 2  # 更新中止
     USE_FLAG_UPDATE = 1  # 更新中
@@ -28,9 +29,11 @@ class DB:
     CHAPTER_URL = "chapter_url"
     CHAPTER_NUM = "chapter_num"
     CHAPTER_DATE = "chapter_date"
+    CHAPTER_SINGLE = "chapter_single"
 
     PAGE_ID = "page_id"
     PAGE_URL = "page_url"
+    PAGE_SINGLE = "page_single"
     PAGE = "page"
 
     book_name_table = "BOOK"
@@ -61,6 +64,7 @@ class DB:
                 book_id integer PRIMARY KEY AUTOINCREMENT, -- ブックID
                 book_key text not null, -- URLに含まれる識別子
                 book_type char, -- タイプ
+                book_single boolean DEFAULT NULL, -- true : 各チャプターの1ページ目はシングルページ
                 use_flag integer, -- 検出有無フラグ
                 url text not null, -- URL
                 title text,  -- タイトル
@@ -102,6 +106,7 @@ class DB:
             insert into {TABLE} (
                 book_key,
                 book_type,
+                book_single,
                 use_flag, 
                 url,
                 title,
@@ -121,6 +126,7 @@ class DB:
                 (
                     kwargs[DB.BOOK_KEY],
                     kwargs[DB.BOOK_TYPE] if DB.BOOK_TYPE in kwargs else None,
+                    kwargs[DB.BOOK_SINGLE] if DB.BOOK_SINGLE in kwargs else None,
                     kwargs[DB.USE_FLAG] if DB.USE_FLAG in kwargs else None,
                     kwargs[DB.URL],
                     kwargs[DB.TITLE] if DB.TITLE in kwargs else None,
@@ -153,6 +159,7 @@ class DB:
 
         value = []
         value.append(kwargs[DB.BOOK_TYPE]) if DB.BOOK_TYPE in kwargs else None
+        value.append(kwargs[DB.BOOK_SINGLE]) if DB.BOOK_SINGLE in kwargs else None
         value.append(kwargs[DB.USE_FLAG]) if DB.USE_FLAG in kwargs else None
         value.append(kwargs[DB.URL]) if DB.URL in kwargs else None
         value.append(kwargs[DB.TITLE]) if DB.TITLE in kwargs else None
@@ -172,6 +179,7 @@ class DB:
             TABLE=self.book_name_table
         )
         sql += ", book_type = ? " if DB.BOOK_TYPE in kwargs else ""
+        sql += ", book_single = ? " if DB.BOOK_SINGLE in kwargs else ""
         sql += ", use_flag = ? " if DB.USE_FLAG in kwargs else ""
         sql += ", url = ? " if DB.URL in kwargs else ""
         sql += ", title = ? " if DB.TITLE in kwargs else ""
@@ -194,6 +202,7 @@ class DB:
         sql = "select book_id "
         sql += ", book_key " if DB.BOOK_KEY in kwargs else ""
         sql += ", book_type " if DB.BOOK_TYPE in kwargs else ""
+        sql += ", book_single " if DB.BOOK_SINGLE in kwargs else ""
         sql += ", use_flag " if DB.USE_FLAG in kwargs else ""
         sql += ", url " if DB.URL in kwargs else ""
         sql += ", title " if DB.TITLE in kwargs else ""
@@ -235,6 +244,7 @@ class DB:
             val = {DB.BOOK_ID: l.pop(0)}
             val.update({DB.BOOK_KEY: l.pop(0)}) if DB.BOOK_KEY in kwargs else ""
             val.update({DB.BOOK_TYPE: l.pop(0)}) if DB.BOOK_TYPE in kwargs else ""
+            val.update({DB.BOOK_SINGLE: l.pop(0)}) if DB.BOOK_SINGLE in kwargs else ""
             val.update({DB.USE_FLAG: l.pop(0)}) if DB.USE_FLAG in kwargs else ""
             val.update({DB.URL: l.pop(0)}) if DB.URL in kwargs else ""
             val.update({DB.TITLE: l.pop(0)}) if DB.TITLE in kwargs else ""
@@ -324,15 +334,16 @@ class DB:
             """
             CREATE TABLE IF NOT EXISTS {TABLE} (
                 chapter_id integer PRIMARY KEY AUTOINCREMENT, -- チャプターID
-                chapter_key text not null, -- 
-                book_id integer not null,
+                chapter_key text not null, -- チャプターキー
+                book_id integer not null, -- BOOK ID
+                chapter_single boolean DEFAULT NULL, -- true:単ページ開始, false:BOOKの設定に関係なく見開きページ、NULL:BOOKの設定に従う
                 chapter_url text, -- チャプターURL
                 chapter_num text, --
                 chapter_date datetime, -- 更新日付
                 created datetime default (datetime('now','localtime')), -- 作成日
                 updated datetime default (datetime('now','localtime')) -- 更新日
             )
-        """.format(
+            """.format(
                 TABLE=self.chapter_name_table
             )
         )
@@ -418,6 +429,7 @@ class DB:
         sql += ", book_id " if DB.BOOK_ID in kwargs else ""
         sql += ", chapter_key " if DB.CHAPTER_KEY in kwargs else ""
         sql += ", chapter_url " if DB.CHAPTER_URL in kwargs else ""
+        sql += ", chapter_single " if DB.CHAPTER_SINGLE in kwargs else ""
         sql += ", chapter_num " if DB.CHAPTER_NUM in kwargs else ""
         sql += ", chapter_date " if DB.CHAPTER_DATE in kwargs else ""
         sql += " from {TABLE} ".format(TABLE=self.chapter_name_table)
@@ -448,6 +460,9 @@ class DB:
             val.update({DB.BOOK_ID: l.pop(0)}) if DB.BOOK_ID in kwargs else ""
             val.update({DB.CHAPTER_KEY: l.pop(0)}) if DB.CHAPTER_KEY in kwargs else ""
             val.update({DB.CHAPTER_URL: l.pop(0)}) if DB.CHAPTER_URL in kwargs else ""
+            val.update(
+                {DB.CHAPTER_SINGLE: l.pop(0)}
+            ) if DB.CHAPTER_SINGLE in kwargs else ""
             val.update({DB.CHAPTER_NUM: l.pop(0)}) if DB.CHAPTER_NUM in kwargs else ""
             if DB.CHAPTER_DATE in kwargs:
                 v = l.pop(0)
@@ -504,11 +519,12 @@ class DB:
                 chapter_id integer not null,
                 page integer not null, -- ページ番号
                 page_url text not null, -- ページURL
+                page_single boolean NOT NULL DEFAULT FALSE, -- シングルページフラグ
                 created datetime default (datetime('now','localtime')), -- 作成日
                 updated datetime default (datetime('now','localtime')) -- 更新日
             )
         """.format(
-                TABLE=self.page_name_table, CHAPTER=self.chapter_name_table
+                TABLE=self.page_name_table
             )
         )
 
@@ -538,15 +554,20 @@ class DB:
         cur = self.conn.cursor()
         cur.execute(
             """
-            select page_id, page, page_url from {TABLE} where chapter_id = ? order by page
-        """.format(
+                select page_id, page, page_url, page_single from {TABLE} where chapter_id = ? order by page
+            """.format(
                 TABLE=self.page_name_table
             ),
             (chapter_id,),
         )
 
         lists = [
-            {DB.PAGE_ID: val[0], DB.PAGE: val[1], DB.PAGE_URL: val[2]}
+            {
+                DB.PAGE_ID: val[0],
+                DB.PAGE: val[1],
+                DB.PAGE_URL: val[2],
+                DB.PAGE_SINGLE: val[3],
+            }
             for val in cur.fetchall()
         ]
         cur.close()
