@@ -97,9 +97,27 @@ function updateProgressBar(progress) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    var imageUrls = Array.from(document.querySelectorAll('#image-urls td')).map(td => td.textContent.replace(/\r\n|\n|\r/gm, "").trim());
+    var imageUrls = [];
     var viewer = document.getElementById('image-viewer');
     var currentIndex = 0;
+
+    // <td>要素をすべて取得
+    var tdElements = document.querySelectorAll('#image-urls td');
+
+    // 各<td>要素に対して処理を行う
+    tdElements.forEach(function (td) {
+        // 結果のオブジェクトを配列に追加
+        imageUrls.push({
+            single: td.getAttribute('data-single') === 'True',
+            url: td.getAttribute('data-url')
+        });
+    });
+
+    function getViewportSize() {
+        var width = window.innerWidth || document.documentElement.clientWidth;
+        var height = window.innerHeight || document.documentElement.clientHeight;
+        return { width: width, height: height };
+    }
 
     function updateImageView(count) {
         let image_left = document.querySelector('div.img-left img');
@@ -110,66 +128,117 @@ document.addEventListener('DOMContentLoaded', function () {
         let next_right = document.querySelector('div.img-right div');
 
         /* 計算されたスタイルを取得 */
-        let style_center = window.getComputedStyle(document.querySelector('div.img-center'));
+        let center_element = document.querySelector('div.img-center');
+        let left_element = document.querySelector('div.img-left');
+        let right_element = document.querySelector('div.img-right');
 
-        let index = currentIndex;
-
-        /* centerのdisplayがnoneの場合、左右表示と判断 */
-        /* 画像数を二枚、右側を偶数ページに設定 */
-        if (style_center.display == "none") {
-            count = count * 2;
-            index = index - (index % 2)
+        function displaySinglePage(isDisplay) {
+            if (isDisplay) {
+                /* 単ページ表示 */
+                if (center_element.style.display !== "inline") {
+                    center_element.style.display = "inline";
+                    left_element.style.display = "none";
+                    right_element.style.display = "none";
+                }
+            } else {
+                /* 両開きページ表示 */
+                if (center_element.style.display !== "none") {
+                    center_element.style.display = "none";
+                    left_element.style.display = "inline";
+                    right_element.style.display = "inline";
+                }
+            }
         }
 
-        if (0 <= index + count && index + count <= imageUrls.length) {
-            if (index + count == imageUrls.length) {
-                currentIndex = index + count;
-
+        /* 単ページ表示 */
+        function singleView() {
+            if (currentIndex === imageUrls.length) {
+                /* 最終ページの次のページを表示のときはnextを表示 */
                 next_center.style.visibility = "visible";
                 image_center.style.visibility = "hidden";
-                image_center.src = imageUrls[0];
-
-                next_left.style.visibility = "hidden";
-                next_right.style.visibility = "visible";
-
-                image_left.style.visibility = "hidden";
-                image_right.style.visibility = "hidden";
-
-                image_left.src = imageUrls[0];
-                image_right.src = imageUrls[0];
-
-            } else if (count == 2 && index + count + 1 == imageUrls.length) {
-                currentIndex = index + count;
-
-                next_center.style.visibility = "hidden";
-                image_center.style.visibility = "visible";
-                image_center.src = imageUrls[0];
-
-                next_left.style.visibility = "visible";
-                next_right.style.visibility = "hidden";
-
-                image_left.style.visibility = "hidden";
-                image_right.style.visibility = "visible";
-
-                image_left.src = imageUrls[currentIndex];
-                image_right.src = imageUrls[currentIndex];
-
+                image_center.src = imageUrls[0]["url"];
             } else {
-                currentIndex = index + count;
-
                 next_center.style.visibility = "hidden";
                 image_center.style.visibility = "visible";
-                image_center.src = imageUrls[currentIndex];
+                image_center.src = imageUrls[currentIndex]["url"];
+            }
 
-                next_left.style.visibility = "hidden";
-                next_right.style.visibility = "hidden";
+            displaySinglePage(true);
+        }
 
-                image_left.style.visibility = "visible";
-                image_right.style.visibility = "visible";
+        /* 見開きページ表示 */
+        function doubleView(left_view, right_view, left_index, right_index) {
+            next_left.style.visibility = left_view ? "hidden" : "visible";
+            next_right.style.visibility = right_view ? "hidden" : "visible";
 
-                image_left.src = imageUrls[(currentIndex + 1) % imageUrls.length];
-                image_right.src = imageUrls[currentIndex];
+            image_left.style.visibility = left_view ? "visible" : "hidden";
+            image_right.style.visibility = right_view ? "visible" : "hidden";
 
+            image_left.src = imageUrls[left_index]["url"];
+            image_right.src = imageUrls[right_index]["url"];
+
+            displaySinglePage(false);
+        }
+
+        function getIndex(number) {
+            var ret = 0;
+            var pos = 'r';
+            for (index = 0; index <= number; index++) {
+                if (index < imageUrls.length && imageUrls[index]["single"]) {
+                    ret = index;
+                    pos = 'c';
+                } else if (pos === 'r' || pos === 'c') {
+                    ret = index;
+                    pos = 'l';
+                } else if (pos === 'l') {
+                    pos = 'r';
+                }
+            }
+            return ret;
+        }
+
+        var viewportSize = getViewportSize();
+
+        if (viewportSize.height * 4 > viewportSize.width * 3) {
+            /* 縦長 */
+            if (currentIndex + count < 0 || imageUrls.length < currentIndex + count) {
+                /* 表示ページが、ページ一覧外の時は処理しない。 */
+                return;
+            }
+
+            currentIndex = currentIndex + count;
+            singleView();
+        } else {
+            /* 横長 */
+
+            if (count > 0 && currentIndex + count < imageUrls.length && !imageUrls[currentIndex]["single"]) {
+                /* 現在、シングルページを表示でない場合、増加率を2倍に */
+                count = count * 2;
+            }
+
+            if (currentIndex + count < 0 || imageUrls.length < currentIndex + count) {
+                /* 表示ページが、ページ一覧外の時は処理しない。 */
+                return;
+            }
+
+            currentIndex = getIndex(currentIndex + count);
+
+            /* 遷移先がシングルページの場合、シングルページ表示を行う */
+            if ((0 <= currentIndex && currentIndex < imageUrls.length) &&
+                imageUrls[currentIndex]["single"]) {
+                singleView();
+                return;
+            }
+
+            if (currentIndex === imageUrls.length) {
+                /* nextページを単体で表示する場合 */
+                singleView();
+            } else if (currentIndex + 1 === imageUrls.length) {
+                /* 最終イメージとnextページを表示する場合 */
+                doubleView(false, true, currentIndex, currentIndex);
+            } else {
+                /* 両ページの表示 */
+                doubleView(true, true, currentIndex + 1, currentIndex);
             }
         }
     }
@@ -183,16 +252,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 /* 読み込み完了後に、次の画像読み込みを行う */
                 preloadNextImage(index + 1);
             };
-            img.src = imageUrls[index];
+            img.src = imageUrls[index]["url"];
         }
-    }
-
-    function showNextImage() {
-        updateImageView(1);
-    }
-
-    function showPreviousImage() {
-        updateImageView(-1);
     }
 
     /* タッチスワイプ操作の処理 */
@@ -206,16 +267,26 @@ document.addEventListener('DOMContentLoaded', function () {
     viewer.addEventListener('touchend', function (event) {
         touchEndX = event.changedTouches[0].screenX;
         if ((touchEndX > touchStartX) || Math.abs(touchEndX - touchStartX) < 10) {
-            showNextImage();
+            updateImageView(1);
         } else if (touchEndX < touchStartX) {
-            showPreviousImage();
+            updateImageView(-1);
         }
     }, false);
 
     /* 矢印キーの処理 */
     document.addEventListener('keydown', function (event) {
-        if (event.key === 'ArrowRight') showPreviousImage();
-        if (event.key === 'ArrowLeft' || event.key === ' ') showNextImage();
+        if (event.key === 'ArrowRight') updateImageView(-1);
+        if (event.key === 'ArrowLeft' || event.key === ' ') updateImageView(1);
+    });
+
+    /* 画面サイズ変更を検出 */
+    window.addEventListener('resize', function () {
+        updateImageView(0);
+    });
+
+    /* デバイスの向きが変わった際の変更を検出 */
+    window.addEventListener('orientationchange', function () {
+        updateImageView(0);
     });
 
     /* 初期画像の表示 */
