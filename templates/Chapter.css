@@ -19,22 +19,23 @@ html {
 }
 
 body {
-    display: inline;
+    /* display: inline; */
     font-family: "ヒラギノ角ゴ ProN W3", "HiraKakuProN-W3", "游ゴシック", "Yu Gothic", "メイリオ", "Meiryo", "Verdana", "Helvetica", "Arial", "sans-serif";
 }
 
 .HeaderPage {
-    position: sticky;
+    /* position: sticky; */
     /* ヘッダーを固定する */
-    top: 0;
+    /* top: 0; */
     /* 上部から配置の基準位置を決める */
-    left: 0;
+    /* left: 0;
     /* 左から配置の基準位置を決める */
-    width: calc(100vw - 12px);
+    /* width: calc(100vw - 12px); */
+    width: auto;
     /* 横幅を指定する */
     height: 1.3em;
     /* 高さを指定する */
-    padding: 2px;
+    padding: 0.1em;
     /* 余白を指定する(上下左右) */
     background-color: #31a9ee;
     /* 背景色を指定する */
@@ -84,11 +85,11 @@ div.Prev {
 
 /* 画像表示領域のスタイリング */
 #image-viewer {
-    position: sticky;
+    /* position: sticky; */
     /* ヘッダーを固定する */
-    top: 1.3em;
+    /* top: 1.3em; */
     /* 上部から配置の基準位置を決める */
-    left: 0;
+    /* left: 0; */
     /* 左から配置の基準位置を決める */
     width: auto;
     height: calc(100vh - 1.5em);
