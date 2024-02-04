@@ -64,7 +64,7 @@ class DB:
                 book_id integer PRIMARY KEY AUTOINCREMENT, -- ブックID
                 book_key text not null, -- URLに含まれる識別子
                 book_type char, -- タイプ
-                book_single boolean DEFAULT NULL, -- true : 各チャプターの1ページ目はシングルページ
+                book_single boolean NOT NULL DEFAULT FALSE, -- true : 各チャプターの1ページ目はシングルページ
                 use_flag integer, -- 検出有無フラグ
                 url text not null, -- URL
                 title text,  -- タイトル
@@ -118,7 +118,7 @@ class DB:
                 kuma_description,
                 kuma_posted,
                 kuma_updated
-            ) values (?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """.format(
                 TABLE=self.book_name_table
             ),
@@ -126,7 +126,7 @@ class DB:
                 (
                     kwargs[DB.BOOK_KEY],
                     kwargs[DB.BOOK_TYPE] if DB.BOOK_TYPE in kwargs else None,
-                    kwargs[DB.BOOK_SINGLE] if DB.BOOK_SINGLE in kwargs else None,
+                    kwargs[DB.BOOK_SINGLE] if DB.BOOK_SINGLE in kwargs else False,
                     kwargs[DB.USE_FLAG] if DB.USE_FLAG in kwargs else None,
                     kwargs[DB.URL],
                     kwargs[DB.TITLE] if DB.TITLE in kwargs else None,
