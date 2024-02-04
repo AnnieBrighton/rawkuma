@@ -289,6 +289,27 @@ document.addEventListener('DOMContentLoaded', function () {
         updateImageView(0);
     });
 
+    let debounceTimer;
+    let delayY = 0;
+
+    window.addEventListener('wheel', function (event) {
+        /* タイマーをリセットする */
+        clearTimeout(debounceTimer);
+        delayY = delayY + event.deltaY;
+
+        /* 指定した時間（例：200ミリ秒）後にページ移動関数を実行 */
+        debounceTimer = setTimeout(function () {
+            if (delayY > 0) {
+                /* ホイールを下にスクロール 次ページへ */
+                updateImageView(1);
+            } else if (delayY < 0) {
+                /* ホイールを上にスクロール 全ページへ */
+                updateImageView(-1);
+            }
+            delayY = 0;
+        }, 200);
+    });
+
     /* 初期画像の表示 */
     updateImageView(0);
     /* プリロード */
