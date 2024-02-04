@@ -41,6 +41,9 @@ class senmangaHTML(getHTML, HTMLinterface):
         tab = ChromeTab(self.chrome)
         await tab.open()
         await tab.get(url)
+
+        await asyncio.sleep(10)
+
         text = await tab.getDOM()
         self.html = etree.HTML(text)
 
@@ -96,17 +99,21 @@ class senmangaHTML(getHTML, HTMLinterface):
             vals.append(
                 (
                     href[0] if href else None,
-                    nums[0].replace("\n", "").replace("\t", "").strip()
-                    if nums
-                    else None,
-                    datetime.strptime(
-                        date[0] + "+00:00",
-                        "%Y-%m-%d %H:%M:%S%z",
-                    )
-                    .astimezone(ZoneInfo("Asia/Tokyo"))
-                    .replace(tzinfo=None)
-                    if date
-                    else None,
+                    (
+                        nums[0].replace("\n", "").replace("\t", "").strip()
+                        if nums
+                        else None
+                    ),
+                    (
+                        datetime.strptime(
+                            date[0] + "+00:00",
+                            "%Y-%m-%d %H:%M:%S%z",
+                        )
+                        .astimezone(ZoneInfo("Asia/Tokyo"))
+                        .replace(tzinfo=None)
+                        if date
+                        else None
+                    ),
                 )
             )
         return vals
