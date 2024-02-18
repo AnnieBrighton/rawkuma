@@ -64,7 +64,7 @@ class DB:
                 book_id integer PRIMARY KEY AUTOINCREMENT, -- ブックID
                 book_key text not null, -- URLに含まれる識別子
                 book_type char, -- タイプ
-                book_single boolean NOT NULL DEFAULT FALSE, -- true : 各チャプターの1ページ目はシングルページ
+                book_single boolean NOT NULL DEFAULT TRUE, -- true : 各チャプターの1ページ目はシングルページ
                 use_flag integer, -- 検出有無フラグ
                 url text not null, -- URL
                 title text,  -- タイトル
@@ -126,7 +126,7 @@ class DB:
                 (
                     kwargs[DB.BOOK_KEY],
                     kwargs[DB.BOOK_TYPE] if DB.BOOK_TYPE in kwargs else None,
-                    kwargs[DB.BOOK_SINGLE] if DB.BOOK_SINGLE in kwargs else False,
+                    kwargs[DB.BOOK_SINGLE] if DB.BOOK_SINGLE in kwargs else True,
                     kwargs[DB.USE_FLAG] if DB.USE_FLAG in kwargs else None,
                     kwargs[DB.URL],
                     kwargs[DB.TITLE] if DB.TITLE in kwargs else None,
@@ -135,9 +135,11 @@ class DB:
                     kwargs[DB.KUMA_TITLE] if DB.KUMA_TITLE in kwargs else None,
                     kwargs[DB.KUMA_AUTHOR] if DB.KUMA_AUTHOR in kwargs else None,
                     kwargs[DB.KUMA_TAG] if DB.KUMA_TAG in kwargs else None,
-                    kwargs[DB.KUMA_DESCRIPTION]
-                    if DB.KUMA_DESCRIPTION in kwargs
-                    else None,
+                    (
+                        kwargs[DB.KUMA_DESCRIPTION]
+                        if DB.KUMA_DESCRIPTION in kwargs
+                        else None
+                    ),
                     kwargs[DB.KUMA_POSTED] if DB.KUMA_POSTED in kwargs else None,
                     kwargs[DB.KUMA_UPDATED] if DB.KUMA_UPDATED in kwargs else None,
                 )
@@ -168,9 +170,11 @@ class DB:
         value.append(kwargs[DB.KUMA_TITLE]) if DB.KUMA_TITLE in kwargs else None
         value.append(kwargs[DB.KUMA_AUTHOR]) if DB.KUMA_AUTHOR in kwargs else None
         value.append(kwargs[DB.KUMA_TAG]) if DB.KUMA_TAG in kwargs else None
-        value.append(
-            kwargs[DB.KUMA_DESCRIPTION]
-        ) if DB.KUMA_DESCRIPTION in kwargs else None
+        (
+            value.append(kwargs[DB.KUMA_DESCRIPTION])
+            if DB.KUMA_DESCRIPTION in kwargs
+            else None
+        )
         value.append(kwargs[DB.KUMA_POSTED]) if DB.KUMA_POSTED in kwargs else None
         value.append(kwargs[DB.KUMA_UPDATED]) if DB.KUMA_UPDATED in kwargs else None
         value.append(book_id)
@@ -253,29 +257,35 @@ class DB:
             val.update({DB.KUMA_TITLE: l.pop(0)}) if DB.KUMA_TITLE in kwargs else ""
             val.update({DB.KUMA_AUTHOR: l.pop(0)}) if DB.KUMA_AUTHOR in kwargs else ""
             val.update({DB.KUMA_TAG: l.pop(0)}) if DB.KUMA_TAG in kwargs else ""
-            val.update(
-                {DB.KUMA_DESCRIPTION: l.pop(0)}
-            ) if DB.KUMA_DESCRIPTION in kwargs else ""
+            (
+                val.update({DB.KUMA_DESCRIPTION: l.pop(0)})
+                if DB.KUMA_DESCRIPTION in kwargs
+                else ""
+            )
             if DB.KUMA_POSTED in kwargs:
                 v = l.pop(0)
                 val.update(
                     {
-                        DB.KUMA_POSTED: datetime.strptime(
-                            v, "%Y-%m-%d %H:%M:%S%z"
-                        ).astimezone(timezone(timedelta(hours=9)))
-                        if v is not None
-                        else None
+                        DB.KUMA_POSTED: (
+                            datetime.strptime(v, "%Y-%m-%d %H:%M:%S%z").astimezone(
+                                timezone(timedelta(hours=9))
+                            )
+                            if v is not None
+                            else None
+                        )
                     }
                 )
             if DB.KUMA_UPDATED in kwargs:
                 v = l.pop(0)
                 val.update(
                     {
-                        DB.KUMA_UPDATED: datetime.strptime(
-                            v, "%Y-%m-%d %H:%M:%S%z"
-                        ).astimezone(timezone(timedelta(hours=9)))
-                        if v is not None
-                        else None
+                        DB.KUMA_UPDATED: (
+                            datetime.strptime(v, "%Y-%m-%d %H:%M:%S%z").astimezone(
+                                timezone(timedelta(hours=9))
+                            )
+                            if v is not None
+                            else None
+                        )
                     }
                 )
             vals.append(val)
@@ -460,19 +470,23 @@ class DB:
             val.update({DB.BOOK_ID: l.pop(0)}) if DB.BOOK_ID in kwargs else ""
             val.update({DB.CHAPTER_KEY: l.pop(0)}) if DB.CHAPTER_KEY in kwargs else ""
             val.update({DB.CHAPTER_URL: l.pop(0)}) if DB.CHAPTER_URL in kwargs else ""
-            val.update(
-                {DB.CHAPTER_SINGLE: l.pop(0)}
-            ) if DB.CHAPTER_SINGLE in kwargs else ""
+            (
+                val.update({DB.CHAPTER_SINGLE: l.pop(0)})
+                if DB.CHAPTER_SINGLE in kwargs
+                else ""
+            )
             val.update({DB.CHAPTER_NUM: l.pop(0)}) if DB.CHAPTER_NUM in kwargs else ""
             if DB.CHAPTER_DATE in kwargs:
                 v = l.pop(0)
                 val.update(
                     {
-                        DB.CHAPTER_DATE: datetime.strptime(
-                            v, "%Y-%m-%d %H:%M:%S"
-                        ).astimezone(timezone(timedelta(hours=9)))
-                        if v is not None
-                        else None
+                        DB.CHAPTER_DATE: (
+                            datetime.strptime(v, "%Y-%m-%d %H:%M:%S").astimezone(
+                                timezone(timedelta(hours=9))
+                            )
+                            if v is not None
+                            else None
+                        )
                     }
                 )
             vals.append(val)
