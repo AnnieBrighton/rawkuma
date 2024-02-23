@@ -126,9 +126,11 @@ class MkKuma2Html:
                     ),
                     "SRC": book[DB.THUMB],
                     "FLAG": book[DB.USE_FLAG],
-                    "TITLE": html.escape(book[DB.TITLE], quote=True)
-                    if book[DB.TITLE] is not None
-                    else "未設定",
+                    "TITLE": (
+                        html.escape(book[DB.TITLE], quote=True)
+                        if book[DB.TITLE] is not None
+                        else "未設定"
+                    ),
                 }
                 for book in books
             ],
@@ -158,9 +160,11 @@ class MkKuma2Html:
         data = {
             "type": type,
             "thumb": book[DB.THUMB],
-            "title": html.escape(book[DB.TITLE], quote=True)
-            if book[DB.TITLE] is not None
-            else "未設定",
+            "title": (
+                html.escape(book[DB.TITLE], quote=True)
+                if book[DB.TITLE] is not None
+                else "未設定"
+            ),
             "book_key": book[DB.BOOK_KEY],
             "chapters": [
                 {
@@ -196,7 +200,13 @@ class MkKuma2Html:
             prev = chapters[index - 1]
             next = chapters[(index + 1) % max]
 
-            pages = self.db.select_page(chapter[DB.CHAPTER_ID])
+            pages = self.db.select_page(
+                **{
+                    DB.CHAPTER_ID: chapter[DB.CHAPTER_ID],
+                    DB.PAGE_URL: None,
+                    DB.PAGE_SINGLE: None,
+                }
+            )
 
             # 単ページから開始するか、
             single_page_start = (
@@ -217,9 +227,11 @@ class MkKuma2Html:
                 },
                 "book_key": book[DB.BOOK_KEY],
                 "chapter_key": chapter[DB.CHAPTER_KEY],
-                "title": html.escape(book[DB.TITLE], quote=True)
-                if book[DB.TITLE] is not None
-                else "未設定",
+                "title": (
+                    html.escape(book[DB.TITLE], quote=True)
+                    if book[DB.TITLE] is not None
+                    else "未設定"
+                ),
                 "chapter_top": book[DB.BOOK_KEY] + ".html",
                 "chapters": [
                     {

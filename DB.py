@@ -564,28 +564,47 @@ class DB:
         )
         cur.close()
 
-    def select_page(self, chapter_id):
+    def select_page(self, **kwargs):
         cur = self.conn.cursor()
-        cur.execute(
-            """
-                select page_id, page, page_url, page_single from {TABLE} where chapter_id = ? order by page
-            """.format(
-                TABLE=self.page_name_table
-            ),
-            (chapter_id,),
-        )
 
-        lists = [
-            {
-                DB.PAGE_ID: val[0],
-                DB.PAGE: val[1],
-                DB.PAGE_URL: val[2],
-                DB.PAGE_SINGLE: val[3],
-            }
-            for val in cur.fetchall()
-        ]
+        sql = "select page_id "
+        sql += ", chapter_id " if DB.CHAPTER_ID in kwargs else ""
+        sql += ", page " if DB.PAGE in kwargs else ""
+        sql += ", page_single " if DB.PAGE_SINGLE in kwargs else ""
+        sql += ", page_url " if DB.PAGE_URL in kwargs else ""
+        sql += " from {TABLE} ".format(TABLE=self.page_name_table)
+
+        value = []
+        where = []
+
+        def xset(key, str):
+            if key in kwargs and kwargs[key] is not None:
+                where.append(f"{str}")
+                value.append(kwargs[key])
+
+        xset(DB.PAGE_ID, "page_id = ?")
+        xset(DB.CHAPTER_ID, "chapter_id = ?")
+        xset(DB.PAGE, "page = ?")
+        xset(DB.PAGE_URL, "page_url = ?")
+        xset(DB.PAGE_SINGLE, "page_single = ?")
+
+        sql += " where {W}".format(W=" and ".join(where)) if len(where) != 0 else ""
+        sql += " order by page"
+
+        cur.execute(sql, tuple(value))
+
+        vals = []
+        for row in cur.fetchall():
+            l = list(row)
+            val = {DB.PAGE_ID: l.pop(0)}
+            val.update({DB.CHAPTER_ID: l.pop(0)}) if DB.CHAPTER_ID in kwargs else ""
+            val.update({DB.PAGE: l.pop(0)}) if DB.PAGE in kwargs else ""
+            val.update({DB.PAGE_SINGLE: l.pop(0)}) if DB.PAGE_SINGLE in kwargs else ""
+            val.update({DB.PAGE_URL: l.pop(0)}) if DB.PAGE_URL in kwargs else ""
+            vals.append(val)
+
         cur.close()
-        return lists
+        return vals
 
     def delete_page(self, chapter_id) -> None:
         cur = self.conn.cursor()
