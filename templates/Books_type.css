@@ -43,7 +43,7 @@ body {
 }
 
 /* スマートフォン向けのスタイル */
-@media (max-device-width: 599px) {
+@media (max-width: 599px) {
     .HeaderBook {
         height: 4.5em;
         /* ヘッダーの高さを指定する */
@@ -85,14 +85,16 @@ body {
 }
 
 .BookList {
-    margin-top: 3.1em; /* 上の空白を指定 */
+    margin-top: 3.1em;
+    /* 上の空白を指定 */
     height: auto;
 }
 
 /* スマートフォン向けのスタイル */
 @media (max-width: 599px) {
     .BookList {
-        margin-top: 4.7em; /* 上の空白を指定 */
+        margin-top: 4.7em;
+        /* 上の空白を指定 */
     }
 }
 
@@ -119,28 +121,28 @@ a img {
 }
 
 /* 横幅が1400px以下 横幅の1/7 */
-@media screen and (max-device-width: 1400px) {
+@media screen and (max-width: 1400px) {
     .bs {
         width: 14.28%;
     }
 }
 
 /* 横幅が1024px以下 横幅の1/5 */
-@media screen and (max-device-width: 1024px) {
+@media screen and (max-width: 1024px) {
     .bs {
         width: 20%;
     }
 }
 
 /* 横幅が770px以下 横幅の1/4 */
-@media screen and (max-device-width: 770px) {
+@media screen and (max-width: 770px) {
     .bs {
         width: 25%;
     }
 }
 
 /* 横幅が599px以下 横幅の1/3 */
-@media screen and (max-device-width: 599px) {
+@media screen and (max-width: 599px) {
     .bs {
         width: 33%;
     }
@@ -159,7 +161,8 @@ a img {
     padding: 137% 0 0;
     position: relative;
     overflow: hidden;
-    background: #f6f6f6;;
+    background: #f6f6f6;
+    ;
     border-radius: 3px;
 }
 
