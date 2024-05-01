@@ -63,10 +63,13 @@ class Chrome:
 
     async def stop(self) -> None:
         for tab in await self.browser.list_tab():
-            await tab.stop()
+            try:
+                await tab.stop()
 
-            # wait for loading
-            await tab.wait(5)
+                # wait for loading
+                await tab.wait(5)
+            except aiochrome.exceptions.RuntimeException:
+                pass
 
             # close tab
             await self.browser.close_tab(tab)
