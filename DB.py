@@ -36,9 +36,9 @@ class DB:
     PAGE_SINGLE = "page_single"
     PAGE = "page"
 
-    book_name_table = "BOOK"
-    chapter_name_table = "CHAPTER"
-    page_name_table = "PAGE"
+    BOOK_TABLE = "BOOK"
+    CHAPTER_TABLE = "CHAPTER"
+    PAGE_TABLE = "PAGE"
     dbname = "rawkuma.sqlite"
 
     def __init__(self, logging) -> None:
@@ -59,8 +59,8 @@ class DB:
 
     def __create_table_book(self) -> None:
         self.conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS {TABLE} (
+            f"""
+            CREATE TABLE IF NOT EXISTS {self.BOOK_TABLE} (
                 book_id integer PRIMARY KEY AUTOINCREMENT, -- ブックID
                 book_key text not null, -- URLに含まれる識別子
                 book_type char, -- タイプ
@@ -79,19 +79,11 @@ class DB:
                 created datetime default (datetime('now','localtime')), -- 作成日
                 updated datetime default (datetime('now','localtime')) -- 更新日
             )
-        """.format(
-                TABLE=self.book_name_table
-            )
+            """
         )
 
         self.conn.execute(
-            """
-            CREATE UNIQUE INDEX IF NOT EXISTS {TABLE}_key ON {TABLE} (
-                book_key -- URLに含まれる識別子
-            )
-        """.format(
-                TABLE=self.book_name_table
-            )
+            f"CREATE UNIQUE INDEX IF NOT EXISTS {self.BOOK_TABLE}_key ON {self.BOOK_TABLE} (book_key)"
         )
 
     def insert_book(self, **kwargs) -> int:
@@ -102,8 +94,8 @@ class DB:
 
         cur = self.conn.cursor()
         cur.executemany(
-            """
-            insert into {TABLE} (
+            f"""
+            insert into {self.BOOK_TABLE} (
                 book_key,
                 book_type,
                 book_single,
@@ -119,9 +111,7 @@ class DB:
                 kuma_posted,
                 kuma_updated
             ) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        """.format(
-                TABLE=self.book_name_table
-            ),
+            """,
             [
                 (
                     kwargs[DB.BOOK_KEY],
@@ -146,9 +136,7 @@ class DB:
             ],
         )
 
-        cur.execute(
-            "select last_insert_rowid() from {TABLE}".format(TABLE=self.book_name_table)
-        )
+        cur.execute(f"select last_insert_rowid() from {self.BOOK_TABLE}")
         for row in cur.fetchall():
             cur.close()
             return row[0]  # 取得したbook_idを返す
@@ -179,9 +167,7 @@ class DB:
         value.append(kwargs[DB.KUMA_UPDATED]) if DB.KUMA_UPDATED in kwargs else None
         value.append(book_id)
 
-        sql = "update {TABLE} set updated = datetime('now','localtime')".format(
-            TABLE=self.book_name_table
-        )
+        sql = f"update {self.BOOK_TABLE} set updated = datetime('now','localtime')"
         sql += ", book_type = ? " if DB.BOOK_TYPE in kwargs else ""
         sql += ", book_single = ? " if DB.BOOK_SINGLE in kwargs else ""
         sql += ", use_flag = ? " if DB.USE_FLAG in kwargs else ""
@@ -218,7 +204,7 @@ class DB:
         sql += ", kuma_description " if DB.KUMA_DESCRIPTION in kwargs else ""
         sql += ", kuma_posted " if DB.KUMA_POSTED in kwargs else ""
         sql += ", kuma_updated " if DB.KUMA_UPDATED in kwargs else ""
-        sql += " from {TABLE} ".format(TABLE=self.book_name_table)
+        sql += f" from {self.BOOK_TABLE} "
 
         value = []
         where = []
@@ -237,9 +223,10 @@ class DB:
 
         sql += " where {W}".format(W=" and ".join(where)) if len(where) != 0 else ""
         sql += " order by kuma_updated desc"
-        self.__logging.info(sql)
 
+        self.__logging.info(sql)
         self.__logging.info(tuple(value))
+
         cur.execute(sql, tuple(value))
 
         vals = []
@@ -296,9 +283,7 @@ class DB:
     def getBookID(self, book_key) -> int:
         cur = self.conn.cursor()
         cur.execute(
-            "select book_id from {TABLE} where book_key = ?".format(
-                TABLE=self.book_name_table
-            ),
+            f"select book_id from {self.BOOK_TABLE} where book_key = ?",
             (book_key,),
         )
 
@@ -312,9 +297,7 @@ class DB:
     def check_book(self, book_key) -> bool:
         cur = self.conn.cursor()
         cur.execute(
-            "select book_id from {TABLE} where book_key = ?".format(
-                TABLE=self.book_name_table
-            ),
+            f"select book_id from {self.BOOK_TABLE} where book_key = ?",
             (book_key,),
         )
         lists = cur.fetchall()
@@ -324,9 +307,7 @@ class DB:
     def delete_book(self, book_key) -> None:
         cur = self.conn.cursor()
         cur.execute(
-            "select book_id from {TABLE} where book_key = ?".format(
-                TABLE=self.book_name_table
-            ),
+            f"select book_id from {self.BOOK_TABLE} where book_key = ?",
             (book_key,),
         )
 
@@ -334,15 +315,15 @@ class DB:
             self.delete_chapter(**{DB.BOOK_ID: val[0]})
 
         cur.execute(
-            "delete from {TABLE} where book_key = ?".format(TABLE=self.book_name_table),
+            f"delete from {self.BOOK_TABLE} where book_key = ?",
             (book_key,),
         )
         cur.close()
 
     def __create_table_chapter(self) -> None:
         self.conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS {TABLE} (
+            f"""
+            CREATE TABLE IF NOT EXISTS {self.CHAPTER_TABLE} (
                 chapter_id integer PRIMARY KEY AUTOINCREMENT, -- チャプターID
                 chapter_key text not null, -- チャプターキー
                 book_id integer not null, -- BOOK ID
@@ -353,29 +334,21 @@ class DB:
                 created datetime default (datetime('now','localtime')), -- 作成日
                 updated datetime default (datetime('now','localtime')) -- 更新日
             )
-            """.format(
-                TABLE=self.chapter_name_table
-            )
+            """
         )
 
         self.conn.execute(
-            """
-            CREATE UNIQUE INDEX IF NOT EXISTS {TABLE}_key ON {TABLE} (
+            f"""
+            CREATE UNIQUE INDEX IF NOT EXISTS {self.CHAPTER_TABLE}_key ON {self.CHAPTER_TABLE} (
                 book_id, chapter_key -- チャプター識別子
             )
-        """.format(
-                TABLE=self.chapter_name_table
-            )
+            """
         )
 
     def insert_chapter(self, **kwargs) -> int:
         cur = self.conn.cursor()
         cur.execute(
-            """
-            select chapter_id from {TABLE} where book_id = ? and chapter_key = ?
-        """.format(
-                TABLE=self.chapter_name_table
-            ),
+            f"select chapter_id from {self.CHAPTER_TABLE} where book_id = ? and chapter_key = ? ",
             (kwargs[DB.BOOK_ID], kwargs[DB.CHAPTER_KEY]),
         )
 
@@ -384,17 +357,15 @@ class DB:
             return row[0]  # 取得したchapter_idを返す
 
         cur.executemany(
-            """
-            insert into {TABLE} (
+            f"""
+            insert into {self.CHAPTER_TABLE} (
                 chapter_key,
                 book_id,
                 chapter_url,
                 chapter_num,
                 chapter_date
             ) values (?,?,?,?,?)
-        """.format(
-                TABLE=self.chapter_name_table
-            ),
+            """,
             [
                 (
                     kwargs[DB.CHAPTER_KEY],
@@ -406,11 +377,7 @@ class DB:
             ],
         )
 
-        rows = cur.execute(
-            "select last_insert_rowid() from {TABLE}".format(
-                TABLE=self.chapter_name_table
-            )
-        )
+        rows = cur.execute(f"select last_insert_rowid() from {self.CHAPTER_TABLE}")
         for row in rows:
             cur.close()
             return row[0]  # 取得したchapter_idを返す
@@ -421,11 +388,7 @@ class DB:
     def check_chapter(self, book_id, chapter_key) -> bool:
         cur = self.conn.cursor()
         cur.execute(
-            """
-            select chapter_id from {TABLE} where book_id = ? and chapter_key = ?
-        """.format(
-                TABLE=self.chapter_name_table
-            ),
+            f"select chapter_id from {self.CHAPTER_TABLE} where book_id = ? and chapter_key = ? ",
             (book_id, chapter_key),
         )
         lists = cur.fetchall()
@@ -442,7 +405,7 @@ class DB:
         sql += ", chapter_single " if DB.CHAPTER_SINGLE in kwargs else ""
         sql += ", chapter_num " if DB.CHAPTER_NUM in kwargs else ""
         sql += ", chapter_date " if DB.CHAPTER_DATE in kwargs else ""
-        sql += " from {TABLE} ".format(TABLE=self.chapter_name_table)
+        sql += f" from {self.CHAPTER_TABLE} "
 
         value = []
         where = []
@@ -494,10 +457,48 @@ class DB:
         cur.close()
         return vals
 
-    def delete_chapter(self, **kwargs) -> None:
+    def update_chapter(self, chapter_id, **kwargs) -> None:
+        """
+        チャプター情報更新
+        """
         cur = self.conn.cursor()
 
-        sql = "select chapter_id from {TABLE} ".format(TABLE=self.chapter_name_table)
+        value = []
+        sqlval = [
+            f"update {self.CHAPTER_TABLE} set updated = datetime('now','localtime')"
+        ]
+
+        def xset(key, column):
+            if key in kwargs and kwargs[key] is not None:
+                sqlval.append(f", {column} = ? ")
+                value.append(kwargs[key])
+
+        xset(DB.CHAPTER_KEY, "chapter_key")
+        xset(DB.CHAPTER_URL, "chapter_url")
+        xset(DB.CHAPTER_SINGLE, "chapter_single")
+        xset(DB.CHAPTER_NUM, "chapter_num")
+        xset(DB.CHAPTER_DATE, "chapter_date")
+
+        value.append(chapter_id)
+        sqlval.append(" where chapter_id = ? ")
+
+        sql = "".join(sqlval)
+
+        self.__logging.info(sql)
+        self.__logging.info([tuple(value)])
+
+        cur.executemany(sql, [tuple(value)])
+        cur.close()
+
+    def delete_chapter(self, **kwargs) -> None:
+        """
+        チャプター削除(配下頁込)
+        kwargs[DB.BOOK_ID] 指定したbook_idのチャプター削除
+        kwargs[DB.CHAPTER_ID] 指定したchapter_idのチャプター削除
+        """
+        cur = self.conn.cursor()
+
+        sql = f"select chapter_id from {self.CHAPTER_TABLE} "
 
         value = []
         where = []
@@ -514,21 +515,27 @@ class DB:
 
         cur.execute(sql, tuple(value))
 
+        # 配下のページ削除
         for val in cur.fetchall():
-            self.delete_page(val[0])
+            self.delete_page4chapter(val[0])
 
-        sql = "delete from {TABLE} ".format(TABLE=self.chapter_name_table)
+        sql = f"delete from {self.CHAPTER_TABLE} "
         sql += " where {W}".format(W=" and ".join(where)) if len(where) != 0 else ""
 
         self.__logging.info(sql)
         self.__logging.info(tuple(value))
+
+        # チャプター削除
         cur.execute(sql, tuple(value))
         cur.close()
 
     def __create_table_page(self) -> None:
+        """
+        頁テーブル作成
+        """
         self.conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS {TABLE} (
+            f"""
+            CREATE TABLE IF NOT EXISTS {self.PAGE_TABLE} (
                 page_id integer PRIMARY KEY AUTOINCREMENT, -- ページID
                 chapter_id integer not null,
                 page integer not null, -- ページ番号
@@ -537,34 +544,29 @@ class DB:
                 created datetime default (datetime('now','localtime')), -- 作成日
                 updated datetime default (datetime('now','localtime')) -- 更新日
             )
-        """.format(
-                TABLE=self.page_name_table
-            )
+            """
         )
 
         self.conn.execute(
-            """
-            CREATE UNIQUE INDEX IF NOT EXISTS {TABLE}_key ON {TABLE} (
+            f"""
+            CREATE UNIQUE INDEX IF NOT EXISTS {self.PAGE_TABLE}_key ON {self.PAGE_TABLE} (
                 chapter_id, page
             )
-        """.format(
-                TABLE=self.page_name_table
-            )
+            """
         )
 
     def insert_page(self, pagelists) -> None:
         cur = self.conn.cursor()
         cur.executemany(
-            """
-            insert into {TABLE} (chapter_id, page_url, page) values (?,?,?)
-        """.format(
-                TABLE=self.page_name_table
-            ),
+            f"insert into {self.PAGE_TABLE} (chapter_id, page_url, page) values (?,?,?)",
             pagelists,
         )
         cur.close()
 
     def select_page(self, **kwargs):
+        """
+        頁情報取得
+        """
         cur = self.conn.cursor()
 
         sql = "select page_id "
@@ -572,7 +574,7 @@ class DB:
         sql += ", page " if DB.PAGE in kwargs else ""
         sql += ", page_single " if DB.PAGE_SINGLE in kwargs else ""
         sql += ", page_url " if DB.PAGE_URL in kwargs else ""
-        sql += " from {TABLE} ".format(TABLE=self.page_name_table)
+        sql += " from {TABLE} ".format(TABLE=self.PAGE_TABLE)
 
         value = []
         where = []
@@ -606,13 +608,61 @@ class DB:
         cur.close()
         return vals
 
-    def delete_page(self, chapter_id) -> None:
+    def delete_page4chapter(self, chapter_id) -> None:
+        """
+        頁削除(チャプター単位)
+        """
         cur = self.conn.cursor()
-        sql = "delete from {TABLE} where chapter_id = ?".format(
-            TABLE=self.page_name_table
-        )
+
+        sql = f"delete from {self.PAGE_TABLE} where chapter_id = ?"
         value = (chapter_id,)
+
         self.__logging.info(sql)
         self.__logging.info(tuple(value))
+
         cur.execute(sql, tuple(value))
+        cur.close()
+
+    def delete_page(self, page_id) -> None:
+        """
+        頁削除
+        """
+        cur = self.conn.cursor()
+
+        sql = f"delete from {self.PAGE_TABLE} where page_id = ?"
+        value = (page_id,)
+
+        self.__logging.info(sql)
+        self.__logging.info(tuple(value))
+
+        cur.execute(sql, tuple(value))
+        cur.close()
+
+    def update_page(self, page_id, **kwargs) -> None:
+        """
+        頁情報更新
+        """
+        cur = self.conn.cursor()
+
+        value = []
+        sqlval = [f"update {self.PAGE_TABLE} set updated = datetime('now','localtime')"]
+
+        def xset(key, column):
+            if key in kwargs and kwargs[key] is not None:
+                sqlval.append(f", {column} = ? ")
+                value.append(kwargs[key])
+
+        xset(DB.PAGE, "page")
+        xset(DB.PAGE_SINGLE, "page_single")
+        xset(DB.PAGE_URL, "page_url")
+
+        value.append(page_id)
+        sqlval.append(" where page_id = ? ")
+
+        sql = "".join(sqlval)
+
+        self.__logging.info(sql)
+        self.__logging.info([tuple(value)])
+
+        cur.executemany(sql, [tuple(value)])
         cur.close()
