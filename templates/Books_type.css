@@ -84,6 +84,14 @@ body {
     /* border-radius: 5px; */
 }
 
+/* スマートフォン向けのスタイル */
+@media (max-width: 599px) {
+    .chbox {
+        font-size: 0.9em;
+        /* フォントサイズ */
+    }
+}
+
 .BookList {
     margin-top: 3.1em;
     /* 上の空白を指定 */
