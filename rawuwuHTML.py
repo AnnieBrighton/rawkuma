@@ -82,12 +82,58 @@ class rawuwuHTML(getHTML, HTMLinterface):
 
     # イメージリストを取得
     def getImageList(self):
-        # //*[@id="page0"]/div/canvas
-        # //div[contains(@class, "chapter-imgs")]/div[contains(@class, "page-wrapper")]/div[@class="chapter-img"]/canvas/@data-srcset
-        lists = self.html.xpath(
-            '//div[contains(@class, "chapter-imgs")]/div[contains(@class, "page-wrapper")]/div[contains(@class, "chapter-img")]/canvas/@data-srcset'
-        )
-        return [str(var).strip() for var in lists]
+        # Server
+        """
+        https://cghentai.com/data/8b/b3/30411/322050/000-1125x1600.webp
+        https://s3-rawuwu.b-cdn.net/data/8b/b3/30411/322050/000-1125x1600.webp
+
+        <div class="row servers">
+            <div class="center">
+                <a href="#change1" data-server="https://cghentai.com/" id="change1" class="change current" rel="nofollow">Server 1</a>
+                <a href="#change2" data-server="https://s3-rawuwu.b-cdn.net/" class="change" rel="nofollow">Server 2</a>
+            </div>
+        </div>
+
+        https://s1.rawuwu.com/data/f8/a2/8870/62368/000-1360x1920.jpeg
+        https://s1-rawuwu.b-cdn.net/data/f8/a2/8870/62368/000-1360x1920.jpeg
+
+        古いやつだと
+        <div class="row servers">
+            <div class="center">
+                <a href="#change1" data-server="https://s1.rawuwu.com/" id="change1" class="change current" rel="nofollow">Server 1</a>
+                <a href="#change2" data-server="https://s1-rawuwu.b-cdn.net/" class="change" rel="nofollow">Server 2</a>
+            </div>
+        </div>
+        """
+        xpath = """//a[@id="change1"]/@data-server"""
+        lists = self.html.xpath(xpath)
+        server = "https://cghentai.com/"
+        if lists:
+            server = lists[0]
+
+        """
+        <div class="chapter-imgs  ">
+            <div class="page-wrapper first-page" id="page0">
+                <div class="chapter-img">
+                    <canvas data-opts="{&quot;loadOrder&quot;: 1}" class="lazy entered"
+                        data-srcset="data/03/36/195/297644/000-960x1378.webp" width="960" height="1378"
+                        data-ll-status="entered">
+                    </canvas>
+                </div>
+            </div>
+            <div class="page-wrapper" id="page1">
+                <div class="chapter-img">
+                    <canvas data-opts="{&quot;loadOrder&quot;: 2}" class="lazy entered"
+                        data-srcset="data/03/36/195/297644/001-960x1378.webp" width="960" height="1378"
+                        data-ll-status="entered">
+                    </canvas>
+                </div>
+            </div>
+        </div>
+        """
+        xpath = """//div[contains(@class, "chapter-imgs")]/div[contains(@class, "page-wrapper")]/div[contains(@class, "chapter-img")]/canvas/@data-srcset"""
+        lists = self.html.xpath(xpath)
+        return [(server if str(var).strip()[:4] != "http" else "") + str(var).strip() for var in lists]
 
     # URLリストを取得
     def getURLlists(self):
