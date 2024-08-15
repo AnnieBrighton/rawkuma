@@ -289,8 +289,9 @@ class rawuwuHTML(getHTML, HTMLinterface):
         m = re.search(r"(\d+) minu?t?e?s? ago", timestamp)
         h = re.search(r"(\d+) hours? ago", timestamp)
         d = re.search(r"(\d+) days? ago", timestamp)
+        mo = re.search(r"(\d+) months? ago", timestamp)
 
-        if s is None and m is None and h is None and d is None:
+        if s is None and m is None and h is None and d is None and mo is None:
             date = datetime.strptime(timestamp, "%d-%m-%Y").astimezone(
                 ZoneInfo("Asia/Tokyo")
             )
@@ -298,7 +299,8 @@ class rawuwuHTML(getHTML, HTMLinterface):
             hours_ago = (
                 int(h.group(1))
                 if h is not None
-                else (int(d.group(1)) * 24 if d is not None else 0)
+                else (int(d.group(1)) * 24 if d is not None
+                      else (int(mo.group(1)) * 24 * 30 if mo is not None else 0))
             )
             current_datetime = datetime.now(ZoneInfo("Asia/Tokyo")).replace(
                 minute=0, second=0, microsecond=0
