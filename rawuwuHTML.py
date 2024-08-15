@@ -199,15 +199,31 @@ class rawuwuHTML(getHTML, HTMLinterface):
 
     # 更新時刻を取得
     def getUpdatedOn(self):
-        # /html/body/div[2]/div[7]/div/div/article/time
-        lists = self.html.xpath(
-            '//div[@class="row"]/article/time[@class="time"]/@datetime'
-        )
+        """
+        <li>
+            <div class="md-title">Updated:</div>
+            <div class="md-content">
+                <time class="time" datetime="2024-08-15T07:13:14+02:00">7:13 8/15/2024</time>
+            </div>
+        </li>
+        """
+        xpath = '//div[../div/text() = "Updated:" and @class = "md-content"]/time[@class="time"]/@datetime'
+        lists = self.html.xpath(xpath)
 
         if len(lists) == 0:
-            # /html/body/div[2]/div[7]/div/div[2]/time
-            # ( Updated : 12:2 9/5/2023 )
-            lists = self.html.xpath('//div[@class="row"]/time[@class="time"]/text()')
+            """
+            <li>
+                <div class="md-title">Updated:</div>
+                <div class="md-content">
+                    <time class="time">
+                        <time class="time">14:13 8/15/2024 </time>
+                    </time>
+                </div>
+            </li>
+            """
+            xpath = '//div[../div/text() = "Updated:" and @class = "md-content"]/time[@class="time"]/time[@class="time"]/text()'
+            lists = self.html.xpath(xpath)
+
             return (
                 datetime.strptime(lists[0], "( Updated : %H:%M %m/%d/%Y )")
                 .astimezone(ZoneInfo("Asia/Tokyo"))
@@ -269,16 +285,10 @@ class rawuwuHTML(getHTML, HTMLinterface):
 
         date = None
 
-        s = re.search(r"(\d+) sec ago", timestamp)
-        m = re.search(r"(\d+) minutes ago", timestamp)
-        if m is None:
-            m = re.search(r"(\d+) min ago", timestamp)
-        h = re.search(r"(\d+) hours ago", timestamp)
-        if h is None:
-            h = re.search(r"(\d+) hour ago", timestamp)
-        d = re.search(r"(\d+) days ago", timestamp)
-        if d is None:
-            d = re.search(r"(\d+) day ago", timestamp)
+        s = re.search(r"(\d+) secs? ago", timestamp)
+        m = re.search(r"(\d+) minu?t?e?s? ago", timestamp)
+        h = re.search(r"(\d+) hours? ago", timestamp)
+        d = re.search(r"(\d+) days? ago", timestamp)
 
         if s is None and m is None and h is None and d is None:
             date = datetime.strptime(timestamp, "%d-%m-%Y").astimezone(
