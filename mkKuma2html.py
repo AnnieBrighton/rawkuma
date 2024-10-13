@@ -169,7 +169,7 @@ class MkKuma2Html:
             "chapters": [
                 {
                     "KEY": chap[DB.CHAPTER_KEY],
-                    "HREF": book[DB.BOOK_KEY] + "_" + chap[DB.CHAPTER_KEY] + ".html",
+                    "HREF": chap[DB.CHAPTER_KEY] + ".html",
                     "NUM": chap[DB.CHAPTER_NUM],
                     "DATE": chap[DB.CHAPTER_DATE].strftime("%Y年%m月%d日"),
                 }
@@ -218,11 +218,11 @@ class MkKuma2Html:
 
             data = {
                 "prev": {
-                    "HREF": book[DB.BOOK_KEY] + "_" + prev[DB.CHAPTER_KEY] + ".html",
+                    "HREF": prev[DB.CHAPTER_KEY] + ".html",
                     "NUM": prev[DB.CHAPTER_NUM],
                 },
                 "next": {
-                    "HREF": book[DB.BOOK_KEY] + "_" + next[DB.CHAPTER_KEY] + ".html",
+                    "HREF": next[DB.CHAPTER_KEY] + ".html",
                     "NUM": next[DB.CHAPTER_NUM],
                 },
                 "book_key": book[DB.BOOK_KEY],
@@ -236,10 +236,7 @@ class MkKuma2Html:
                 "chapters": [
                     {
                         "KEY": chap[DB.CHAPTER_KEY],
-                        "HREF": book[DB.BOOK_KEY]
-                        + "_"
-                        + chap[DB.CHAPTER_KEY]
-                        + ".html",
+                        "HREF": chap[DB.CHAPTER_KEY] + ".html",
                         "NUM": chap[DB.CHAPTER_NUM],
                     }
                     for chap in sorted(
@@ -265,7 +262,7 @@ class MkKuma2Html:
                 unquote(
                     os.path.join(
                         path,
-                        book[DB.BOOK_KEY] + "_" + chapter[DB.CHAPTER_KEY] + ".html",
+                        chapter[DB.CHAPTER_KEY] + ".html",
                     )
                 ),
                 mode="w",
