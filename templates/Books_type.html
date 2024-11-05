@@ -5,15 +5,16 @@
               content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
         <meta name="referrer" content="no-referrer">
         <link rel="stylesheet" href="public/Books_type.css">
+        <script src="public/Books_types.js"></script>
     </head>
     <body>
         <div class="HeaderBook">
             <div class="chbox" id="myRow">
                 % for type in types:
                 % if cur_type == type:
-                <a>分類${type}</a>&ensp;
+                <a id="Books${type}">分類${type}</a>&ensp;
                 % else:
-                <a href="Books${type}.html">分類${type}</a>&ensp;
+                <a href="Books${type}.html" id="Books${type}">分類${type}</a>&ensp;
                 % endif
                 % endfor
             </div>
@@ -39,17 +40,5 @@
                 % endfor
             </div>
         </div>
-        <script type="text/javascript">
-            window.onload = function() {
-                let marks = localStorage.getItem("CHAPTER_MARKER");
-                if (marks != null && marks != "") {
-                    marks = JSON.parse(marks);
-                    if (Object.keys(marks).length > 0) {
-                        let row = document.getElementById("myRow");
-                        row.insertAdjacentHTML("beforeend", '<a href="BooksMark.html">マーク</a>');
-                    }
-                }
-            }
-        </script>
     </body>
 </html>
