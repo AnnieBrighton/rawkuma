@@ -26,7 +26,9 @@ from urllib.parse import quote
 
 
 class analyzeHTML:
-    HTMLCLASS = [rawkumaHTML, kingrawHTML, rawuwuHTML, senmangaHTML]
+    # HTMLCLASS = [rawkumaHTML, kingrawHTML, rawuwuHTML, senmangaHTML]
+    # HTMLCLASS = [rawkumaHTML, rawuwuHTML, senmangaHTML]
+    HTMLCLASS = [rawkumaHTML]
 
     def __init__(self, url=None, chrome=None) -> None:
         self.html = None
@@ -109,7 +111,11 @@ class getGooglBooks:
     # JSONを取得
     def getJSON(self, url):
         # 取得HTMLパース
-        return self.__getHTTP(url).json()
+        http = self.__getHTTP(url)
+        if http is not None:
+            return http.json()
+        else:
+            return {}
 
     def getTitle(self, kuma_title):
         max = 0.0
