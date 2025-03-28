@@ -48,7 +48,7 @@ def func_hook(func):
 class getKuma2DB:
     BASE_PATH = "Books"
     ADDBOOK_DATE = "1900-01-01 00:00:00+09:00"
-    LIMITS = 15
+    LIMITS = 1
 
     def __init__(self) -> None:
         self.db = DB(logging)
@@ -316,7 +316,10 @@ class getKuma2DB:
 
         await self.chrome.stop()
 
-    async def updatenew(self, limit=2) -> None:
+        logging.info("await await self.chrome.stop()")
+        os._exit(0)
+
+    async def updatenew(self, limit=1) -> None:
         # DBの更新対象を、USEフラグがONのBOOK
         dbvals = self.db.select_book(
             **{
@@ -367,6 +370,9 @@ class getKuma2DB:
         await asyncio.sleep(10)
 
         await self.chrome.stop()
+
+        logging.info("await await self.chrome.stop()")
+        os._exit(0)
 
     # URLからBOOK KEYを取得
     def get_book_key(self, url) -> str:
@@ -479,6 +485,9 @@ class getKuma2DB:
         await asyncio.sleep(10)
         await self.chrome.stop()
 
+        logging.info("await await self.chrome.stop()")
+        os._exit(0)
+
     @func_hook
     def update_title(self, url, title) -> None:
         """TITLE情報更新
@@ -532,9 +541,11 @@ def main():
         kuma = getKuma2DB()
         if cmd.upper() == "NEW":
             asyncio.run(kuma.updatenew())
+            logging.info('return kuma.updatenew()')
         else:
             kuma.printinfo(unquote(sys.argv[1]))
         kuma.close()
+        logging.info('return kuma.close() in args 2')
 
     elif len(sys.argv) == 3:
         url = unquote(sys.argv[1])
@@ -544,6 +555,7 @@ def main():
         kuma = getKuma2DB()
         if url.upper() == "NEW":
             asyncio.run(kuma.updatenew(limit=int(type)))
+            logging.info('return kuma.updatenew(limit=int(type))')
         elif type.upper() == "ON" or type.upper() == "OFF" or type.upper() == "STOP":
             # USEフラグ変更
             kuma.flagset(url, type)
@@ -563,6 +575,7 @@ def main():
         else:
             logging.info("{TYPE} error".format(TYPE=type))
         kuma.close()
+        logging.info('return kuma.close()')
 
     elif len(sys.argv) >= 4:
         url = unquote(sys.argv[1])
@@ -581,3 +594,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    logging.info('return main()')
