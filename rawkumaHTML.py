@@ -13,7 +13,7 @@ class rawkumaHTML(getHTML, HTMLinterface):
 
     # URLが自身とマッチ判定
     def isMatchURL(url):
-        return re.match(r"^https?://rawkuma\.com/", url)
+        return re.match(r"^https?://rawkuma\.(com|net)/", url)
 
     # 漫画リストURLからbookeyを取得
     def getBookKey(url):
@@ -22,6 +22,7 @@ class rawkumaHTML(getHTML, HTMLinterface):
         """
         types = [
             r"^https?://rawkuma.com/manga/([^/]+)/?$",
+            r"^https?://rawkuma.net/manga/([^/]+)/?$",
         ]
 
         for type in types:
@@ -44,7 +45,7 @@ class rawkumaHTML(getHTML, HTMLinterface):
         # <img class="ts-main-image curdown" data-index="0" src="https://kumacdn.club/images/s/spy-x-family/chapter-62-3/1-6281c0b1e24d0.jpg"
         #      data-server="Server1" onload="ts_reader_control.singleImageOnload();" onerror="ts_reader_control.imageOnError();">
         # //*[@id="readerarea"]/img[1]
-        return self.html.xpath('//*[@id="readerarea"]/img/@src')
+        return self.html.xpath('//*[@id="readerarea"]//img/@src')
 
     # URLリストを取得
     def getURLlists(self):
