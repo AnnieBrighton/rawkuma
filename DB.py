@@ -13,6 +13,8 @@ class DB:
     USE_FLAG_STOPED = 2  # 更新中止
     USE_FLAG_UPDATE = 1  # 更新中
     USE_FLAG_COMPLETED = 0  # 完了
+    USE_FLAG_USED = 3  # 表示対象
+    USE_FLAG_NO_USED = 4 # 表示対象外
     URL = "url"
     THUMB = "thumb"
     TITLE = "title"
@@ -86,7 +88,7 @@ class DB:
             f"CREATE UNIQUE INDEX IF NOT EXISTS {self.BOOK_TABLE}_key ON {self.BOOK_TABLE} (book_key)"
         )
 
-    def insert_book(self, **kwargs) -> int:
+    def insert_book(self, **kwargs) -> int | None:
         book_id = self.getBookID(kwargs[DB.BOOK_KEY])
 
         if book_id is not None:
@@ -207,7 +209,7 @@ class DB:
         sql += f" from {self.BOOK_TABLE} "
 
         value = []
-        where = []
+        where = [f"use_flag <> {DB.USE_FLAG_NO_USED}"]
 
         def xset(key, str):
             if key in kwargs and kwargs[key] is not None:
@@ -280,7 +282,7 @@ class DB:
         cur.close()
         return vals
 
-    def getBookID(self, book_key) -> int:
+    def getBookID(self, book_key) -> int | None:
         cur = self.conn.cursor()
         cur.execute(
             f"select book_id from {self.BOOK_TABLE} where book_key = ?",
@@ -327,6 +329,7 @@ class DB:
                 chapter_id integer PRIMARY KEY AUTOINCREMENT, -- チャプターID
                 chapter_key text not null, -- チャプターキー
                 book_id integer not null, -- BOOK ID
+                use_flag integer default ({DB.USE_FLAG_USED}), -- 表示対象／非対象
                 chapter_single boolean DEFAULT NULL, -- true:単ページ開始, false:BOOKの設定に関係なく見開きページ、NULL:BOOKの設定に従う
                 chapter_url text, -- チャプターURL
                 chapter_num text, --
@@ -345,7 +348,7 @@ class DB:
             """
         )
 
-    def insert_chapter(self, **kwargs) -> int:
+    def insert_chapter(self, **kwargs) -> int | None:
         cur = self.conn.cursor()
         cur.execute(
             f"select chapter_id from {self.CHAPTER_TABLE} where book_id = ? and chapter_key = ? ",
@@ -408,7 +411,7 @@ class DB:
         sql += f" from {self.CHAPTER_TABLE} "
 
         value = []
-        where = []
+        where = [f"use_flag <> {DB.USE_FLAG_NO_USED}"]
 
         def xset(key, str):
             if key in kwargs and kwargs[key] is not None:
@@ -538,6 +541,7 @@ class DB:
             CREATE TABLE IF NOT EXISTS {self.PAGE_TABLE} (
                 page_id integer PRIMARY KEY AUTOINCREMENT, -- ページID
                 chapter_id integer not null,
+                use_flag integer default ({DB.USE_FLAG_USED}), -- 表示対象／非対象
                 page integer not null, -- ページ番号
                 page_url text not null, -- ページURL
                 page_single boolean NOT NULL DEFAULT FALSE, -- シングルページフラグ
@@ -577,7 +581,7 @@ class DB:
         sql += " from {TABLE} ".format(TABLE=self.PAGE_TABLE)
 
         value = []
-        where = []
+        where = [f"use_flag <> {DB.USE_FLAG_NO_USED}"]
 
         def xset(key, str):
             if key in kwargs and kwargs[key] is not None:
