@@ -544,7 +544,7 @@ class DB:
                 use_flag integer default ({DB.USE_FLAG_USED}), -- 表示対象／非対象
                 page integer not null, -- ページ番号
                 page_url text not null, -- ページURL
-                page_single boolean NOT NULL DEFAULT FALSE, -- シングルページフラグ
+                page_single boolean DEFAULT NULL, -- シングルページフラグ
                 created datetime default (datetime('now','localtime')), -- 作成日
                 updated datetime default (datetime('now','localtime')) -- 更新日
             )
