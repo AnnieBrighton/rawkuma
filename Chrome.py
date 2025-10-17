@@ -19,7 +19,9 @@ class Chrome:
 
     # chrome_app = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
     chrome_app = (
-        "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"
+        # "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        # "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"
+        "/Applications/Google Chrome Dev.app/Contents/MacOS/Google Chrome Dev"
     )
 
     def __init__(self, logging) -> None:
@@ -38,7 +40,8 @@ class Chrome:
             pass
 
         opt = [self.chrome_app]
-        opt.append("--headless=new")
+        # opt.append("--headless=new")
+        # opt.append("--new-window")
         opt.append("--user-data-dir=" + self.user_dir)
         # opt.append('--window-size=800,600')
         opt.append("--window-size=1600,200")
