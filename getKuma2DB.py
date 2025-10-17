@@ -48,7 +48,7 @@ def func_hook(func):
 class getKuma2DB:
     BASE_PATH = "Books"
     ADDBOOK_DATE = "1900-01-01 00:00:00+09:00"
-    LIMITS = 1
+    LIMITS = 15
 
     def __init__(self) -> None:
         self.db = DB(logging)
