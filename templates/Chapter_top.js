@@ -1,3 +1,35 @@
+
+// localStorage からAPIトークンを取得
+function getToken() {
+    const t = localStorage.getItem("API_TOKEN");
+    if (!t) {
+        console.error("API_TOKEN is not set. Please visit token_setup.html first.");
+    }
+    return t;
+}
+
+// 認証付きfetchのラッパ
+async function apiFetch(path, options = {}) {
+    const token = getToken();
+    if (!token) {
+        // トークンが未設定なら401になる前に止める
+        throw new Error("No API token");
+    }
+
+    const headers = options.headers ? {...options.headers} : {};
+    headers["Authorization"] = "Bearer " + token;
+
+    // JSON投げるときは呼び出し側でContent-Typeつける。
+    // ここでは勝手に上書きしない。
+
+    const resp = await fetch(path, {
+        ...options,
+        headers,
+    });
+
+    return resp;
+}
+
 /* クエリパラメータを取得する関数 */
 function getQueryParam(name) {
     var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
@@ -25,7 +57,7 @@ function returnBookList(url) {
     return false;
 }
 
-function returnChapter(url) {
+window.returnChapter = async function (url) {
     var abcValue = getQueryParam('MARK');
     if (abcValue === '1') {
         window.location.href = url + '?MARK=1';
@@ -46,68 +78,87 @@ function getDate() {
             ("00" + now.getSeconds()).slice(-2);            // 秒の取り出し
 }
 
-function handleClick(book_key, title, thumb) {
+window.handleClick = async function(book_key, title, thumb) {
     let checkbox = document.getElementById('MarkCheckbox');
-    let marks = localStorage.getItem("CHAPTER_MARKER");
-    if (marks != null) {
-        marks = JSON.parse(marks);
-    } else {
-        marks = {}
-    }
 
     if (checkbox.checked) {
-        let regex = new RegExp('([^/]*/[^/]*/[^/?]*)[^/]*$'),
-            results = regex.exec(window.location.href);
+        // 追加 / 更新
+        const regex = new RegExp('([^/]*/[^/]*/[^/?]*)[^/]*$');
+        const results = regex.exec(window.location.href);
+        let url;
         if (!results || !results[1]) {
             url = '';
         } else {
             url = results[1];
         }
+        url = url + '?TOP=1&MARK=1';
 
-        marks[book_key] = { "title": title, "thumb": thumb, "url": url + '?TOP=1&MARK=1', "update": getDate() };
-        localStorage.setItem("CHAPTER_MARKER", JSON.stringify(marks));
+        const body = {
+            title: title,
+            thumb: thumb,
+            url: url,
+            update: getDate()
+        };
+
+        const resp = await apiFetch(
+            `/mankitsu_api/v1/me/bookmarks/${encodeURIComponent(book_key)}`,
+            {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            }
+        );
+        if (!resp.ok) {
+            console.error("Failed to PUT bookmark", resp.status);
+        }        
     } else {
-        if (marks != null && book_key in marks) {
-            delete marks[book_key];
-            localStorage.setItem("CHAPTER_MARKER", JSON.stringify(marks));
+        // 削除
+        const resp = await apiFetch(
+            `/mankitsu_api/v1/me/bookmarks/${encodeURIComponent(book_key)}`,
+            { method: "DELETE" }
+        );
+        if (!resp.ok) {
+            console.error("Failed to DELETE bookmark", resp.status);
         }
     }
 }
 
 /* ローカルストレージからキー=book_keyで情報を取得 */
-function loadChapterKey(book_key) {
-    var items = localStorage.getItem("CHAPTER_NUMBER");
-    if (items != null && items !== "") {
-        items = JSON.parse(items);
-        if (book_key in items && "chapter" in items[book_key]) {
-            var color = ["#40F0B0", "#60D090", "#80B070", "#A09050"];
-            var c = 0;
-            for (const item of items[book_key]["chapter"].split(' ')) {
-                var tags = document.getElementsByClassName("type-" + item);
-                len = tags.length | 0;
-                for (i = 0; i < len; i = i + 1) {
-                    tags[i].style.background = color[c];
+async function loadChapterKey(book_key) {
+    const resp = await apiFetch(
+        `/mankitsu_api/v1/me/chapters/${encodeURIComponent(book_key)}`,
+        { method: "GET" }
+    );
+
+    if (resp.ok) {
+        const data = await resp.json();
+        const chapterStr = data.chapter;
+        if (chapterStr) {
+
+            const colorPalette = ["#40F0B0", "#60D090", "#80B070", "#A09050"];
+            let ci = 0;
+            for (const chapterId of chapterStr.split(" ")) {
+                // そのchapterIdに対応する要素群へ色付け
+                const tags = document.getElementsByClassName("type-" + chapterId);
+                for (let i = 0; i < tags.length; i++) {
+                    tags[i].style.background = colorPalette[ci];
                 }
-                c++;
-                if (c > color.length) {
+                ci++;
+                if (ci >= colorPalette.length) {
                     break;
                 }
             }
         }
     }
-    var checkbox = document.getElementById('MarkCheckbox');
-    var marks = localStorage.getItem("CHAPTER_MARKER");
-    if (marks != null && marks != "") {
-        marks = JSON.parse(marks);
 
-        if (book_key in marks) {
-            /* チェックボックスをチェック */
-            checkbox.checked = true;
-        } else {
-            /* チェックボックスのチェックを外す */
-            checkbox.checked = false;
-        }
-    } else {
-        marks = {}
+    var checkbox = document.getElementById('MarkCheckbox');
+    const resp1 = await apiFetch(`/mankitsu_api/v1/me/bookmarks`, { method: "GET" });
+    if (!resp1.ok) {
+        console.error("Failed to fetch bookmarks", resp1.status);
+        checkbox.checked = false;
+        return;
     }
+    const data = await resp1.json();
+    // dataは { "book_key": {title,thumb,url,update}, ... }
+    checkbox.checked = !!data[book_key];
 }

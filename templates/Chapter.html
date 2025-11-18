@@ -79,7 +79,7 @@
                     return false;
                 });
             }
-            saveChapterKey("${book_key}", "${chapter_key.replace('.', '-')}");
+            (async () => {await saveChapterKey("${book_key}", "${chapter_key.replace('.', '-')}");})();
         </script>
     </body>
 </html>

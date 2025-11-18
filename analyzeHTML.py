@@ -10,10 +10,7 @@
 # - Posted On
 # - Updated On
 
-from kingrawHTML import kingrawHTML
 from rawkumaHTML import rawkumaHTML
-from rawuwuHTML import rawuwuHTML
-from senmangaHTML import senmangaHTML
 from difflib import SequenceMatcher
 import re
 from requests import session, exceptions
@@ -26,8 +23,6 @@ from urllib.parse import quote
 
 
 class analyzeHTML:
-    # HTMLCLASS = [rawkumaHTML, kingrawHTML, rawuwuHTML, senmangaHTML]
-    # HTMLCLASS = [rawkumaHTML, rawuwuHTML, senmangaHTML]
     HTMLCLASS = [rawkumaHTML]
 
     def __init__(self, url=None, chrome=None) -> None:

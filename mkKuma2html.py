@@ -3,13 +3,15 @@
 import logging
 import os
 import sys
-from DB import DB
 import html
 import hashlib
 
 from urllib.parse import unquote
 from mako.template import Template
 from mako.lookup import TemplateLookup
+
+# ===== Enum版 DB ライブラリ =====
+from DB import DB, UseFlag, CommonCol, BookCol, ChapterCol, PageCol
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,8 +38,8 @@ class MkKuma2Html:
 
     def tohtml(self) -> None:
         """HTML出力"""
-        lists = self.db.select_book(**{DB.BOOK_TYPE: None})
-        types = sorted(set([val[DB.BOOK_TYPE] for val in lists]))
+        lists = self.db.select_book({BookCol.TYPE: None})
+        types = sorted(set([val[BookCol.TYPE] for val in lists]))
 
         # ベースディレクトリ作成
         os.makedirs(self.BASE_PATH, exist_ok=True)
@@ -47,13 +49,15 @@ class MkKuma2Html:
 
         for type in types:
             books = self.db.select_book(
-                **{
-                    DB.BOOK_KEY: None,
-                    DB.TITLE: None,
-                    DB.BOOK_TYPE: type,
-                    DB.BOOK_SINGLE: None,
-                    DB.THUMB: None,
-                    DB.USE_FLAG: None,
+                {
+                    BookCol.KEY: None,
+                    BookCol.TITLE: None,
+                    BookCol.THUMB: None,
+                    BookCol.TYPE: type,
+                    BookCol.SINGLE: None,
+                    BookCol.KUMA_TITLE: None,
+                    BookCol.KUMA_THUMB: None,
+                    CommonCol.USE_FLAG: None,
                 }
             )
 
@@ -62,22 +66,22 @@ class MkKuma2Html:
 
             for book in books:
                 chapters = self.db.select_chapter(
-                    **{
-                        DB.BOOK_ID: book[DB.BOOK_ID],
-                        DB.CHAPTER_ID: None,
-                        DB.CHAPTER_KEY: None,
-                        DB.CHAPTER_URL: None,
-                        DB.CHAPTER_NUM: None,
-                        DB.CHAPTER_DATE: None,
-                        DB.CHAPTER_SINGLE: None,
+                    {
+                        BookCol.ID: book[BookCol.ID],
+                        ChapterCol.ID: None,
+                        ChapterCol.KEY: None,
+                        ChapterCol.URL: None,
+                        ChapterCol.NUM: None,
+                        ChapterCol.DATE: None,
+                        ChapterCol.SINGLE: None,
                     }
                 )
 
                 path = unquote(
                     os.path.join(
                         self.BASE_PATH,
-                        self.getHash(book[DB.BOOK_KEY]),
-                        book[DB.BOOK_KEY],
+                        self.getHash(book[BookCol.KEY]),
+                        book[BookCol.KEY],
                     )
                 )
 
@@ -120,15 +124,15 @@ class MkKuma2Html:
             "books": [
                 {
                     "HREF": os.path.join(
-                        self.getHash(book[DB.BOOK_KEY]),
-                        book[DB.BOOK_KEY],
-                        book[DB.BOOK_KEY] + ".html",
+                        self.getHash(book[BookCol.KEY]),
+                        book[BookCol.KEY],
+                        book[BookCol.KEY] + ".html",
                     ),
-                    "SRC": book[DB.THUMB],
-                    "FLAG": book[DB.USE_FLAG],
+                    "SRC": book[BookCol.THUMB] if book[BookCol.THUMB] is not None else book[BookCol.KUMA_THUMB],
+                    "FLAG": book[CommonCol.USE_FLAG],
                     "TITLE": (
-                        html.escape(book[DB.TITLE], quote=True)
-                        if book[DB.TITLE] is not None
+                        html.escape(book[BookCol.TITLE] if book[BookCol.TITLE] is not None else book[BookCol.KUMA_TITLE], quote=True)
+                        if book[BookCol.KUMA_TITLE] is not None or book[BookCol.TITLE] is not None
                         else "未設定"
                     ),
                 }
@@ -159,28 +163,28 @@ class MkKuma2Html:
 
         data = {
             "type": type,
-            "thumb": book[DB.THUMB],
+            "thumb": book[BookCol.THUMB] if book[BookCol.THUMB] is not None else book[BookCol.KUMA_THUMB],
             "title": (
-                html.escape(book[DB.TITLE], quote=True)
-                if book[DB.TITLE] is not None
+                html.escape(book[BookCol.TITLE] if book[BookCol.TITLE] is not None else book[BookCol.KUMA_TITLE], quote=True)
+                if book[BookCol.KUMA_TITLE] is not None or book[BookCol.TITLE] is not None
                 else "未設定"
             ),
-            "book_key": book[DB.BOOK_KEY],
+            "book_key": book[BookCol.KEY],
             "chapters": [
                 {
-                    "KEY": chap[DB.CHAPTER_KEY],
-                    "HREF": chap[DB.CHAPTER_KEY] + ".html",
-                    "NUM": chap[DB.CHAPTER_NUM],
-                    "DATE": chap[DB.CHAPTER_DATE].strftime("%Y年%m月%d日"),
+                    "KEY": chap[ChapterCol.KEY],
+                    "HREF": chap[ChapterCol.KEY] + ".html",
+                    "NUM": chap[ChapterCol.NUM],
+                    "DATE": chap[ChapterCol.DATE].strftime("%Y年%m月%d日"),
                 }
                 for chap in sorted(
-                    chapters, key=lambda x: x[DB.CHAPTER_KEY], reverse=True
+                    chapters, key=lambda x: x[ChapterCol.KEY], reverse=True
                 )
             ],
         }
 
         with open(
-            unquote(os.path.join(path, book[DB.BOOK_KEY] + ".html")), mode="w"
+            unquote(os.path.join(path, book[BookCol.KEY] + ".html")), mode="w"
         ) as f:
             f.write(tmpl.render(**data))
 
@@ -201,55 +205,55 @@ class MkKuma2Html:
             next = chapters[(index + 1) % max]
 
             pages = self.db.select_page(
-                **{
-                    DB.CHAPTER_ID: chapter[DB.CHAPTER_ID],
-                    DB.PAGE_URL: None,
-                    DB.PAGE_SINGLE: None,
+                {
+                    ChapterCol.ID: chapter[ChapterCol.ID],
+                    PageCol.URL: None,
+                    PageCol.SINGLE: None,
                 }
             )
 
             # 単ページから開始するか、
             single_page_start = (
-                book[DB.BOOK_SINGLE] != 0 and chapter[DB.CHAPTER_SINGLE] is None
+                book[BookCol.SINGLE] != 0 and chapter[ChapterCol.SINGLE] is None
             ) or (
-                chapter[DB.CHAPTER_SINGLE] != 0
-                and chapter[DB.CHAPTER_SINGLE] is not None
+                chapter[ChapterCol.SINGLE] != 0
+                and chapter[ChapterCol.SINGLE] is not None
             )
 
             data = {
                 "prev": {
-                    "HREF": prev[DB.CHAPTER_KEY] + ".html",
-                    "NUM": prev[DB.CHAPTER_NUM],
+                    "HREF": prev[ChapterCol.KEY] + ".html",
+                    "NUM": prev[ChapterCol.NUM],
                 },
                 "next": {
-                    "HREF": next[DB.CHAPTER_KEY] + ".html",
-                    "NUM": next[DB.CHAPTER_NUM],
+                    "HREF": next[ChapterCol.KEY] + ".html",
+                    "NUM": next[ChapterCol.NUM],
                 },
-                "book_key": book[DB.BOOK_KEY],
-                "chapter_key": chapter[DB.CHAPTER_KEY],
+                "book_key": book[BookCol.KEY],
+                "chapter_key": chapter[ChapterCol.KEY],
                 "title": (
-                    html.escape(book[DB.TITLE], quote=True)
-                    if book[DB.TITLE] is not None
+                    html.escape(book[BookCol.TITLE] if book[BookCol.TITLE] is not None else book[BookCol.KUMA_TITLE], quote=True)
+                    if book[BookCol.KUMA_TITLE] is not None or book[BookCol.TITLE] is not None
                     else "未設定"
                 ),
-                "chapter_top": book[DB.BOOK_KEY] + ".html",
+                "chapter_top": book[BookCol.KEY] + ".html",
                 "chapters": [
                     {
-                        "KEY": chap[DB.CHAPTER_KEY],
-                        "HREF": chap[DB.CHAPTER_KEY] + ".html",
-                        "NUM": chap[DB.CHAPTER_NUM],
+                        "KEY": chap[ChapterCol.KEY],
+                        "HREF": chap[ChapterCol.KEY] + ".html",
+                        "NUM": chap[ChapterCol.NUM],
                     }
                     for chap in sorted(
-                        chapters, key=lambda x: x[DB.CHAPTER_KEY], reverse=True
+                        chapters, key=lambda x: x[ChapterCol.KEY], reverse=True
                     )
                 ],
                 "pages": [
                     {
-                        "URL": page[DB.PAGE_URL],
+                        "URL": page[PageCol.URL],
                         "SINGLE": (
                             (
-                                page[DB.PAGE_SINGLE] != 0
-                                and page[DB.PAGE_SINGLE] is not None
+                                page[PageCol.SINGLE] != 0
+                                and page[PageCol.SINGLE] is not None
                             )
                             or (num == 0 and single_page_start)
                         ),
@@ -262,7 +266,7 @@ class MkKuma2Html:
                 unquote(
                     os.path.join(
                         path,
-                        chapter[DB.CHAPTER_KEY] + ".html",
+                        chapter[ChapterCol.KEY] + ".html",
                     )
                 ),
                 mode="w",

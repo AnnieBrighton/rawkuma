@@ -14,9 +14,9 @@ class getHTML:
         tab = ChromeTab(self.chrome)
         await tab.open()
         await tab.get(url)
-        self.text = await tab.getDOM()
+        text = await tab.getDOM()
         await tab.close()
-        self.html = etree.HTML(self.text)
+        self.html = etree.HTML(text)
         return
 
 

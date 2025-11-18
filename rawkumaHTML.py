@@ -1,15 +1,40 @@
 #!/usr/bin/env python3
 
-from datetime import datetime
 import re
 from urllib.parse import unquote
 from booksHTML import HTMLinterface, getHTML
 from zoneinfo import ZoneInfo
-
+from Chrome import ChromeTab
+from lxml import etree
+from datetime import datetime, timedelta
+from typing import List
 
 class rawkumaHTML(getHTML, HTMLinterface):
     def __init__(self, chrome) -> None:
         super().__init__(chrome)
+        self.html2 = None
+
+    async def getTEXT4HTML(self, url) -> None:
+        tab = ChromeTab(self.chrome)
+        await tab.open()
+        await tab.get(url)
+
+        self.html = etree.HTML(await tab.getDOM())
+        self.html2 = None
+
+        # Synopsis, Chapters, Reviews, GalleryのTabが存在するか確認するために、Chaptersの存在を確認
+        elements = await tab.find_elements(path='//button[@id="tab-description" and @data-key="chapters"]')
+        if elements:
+            # Chaptersが存在すれば、Chaptersをクリックし画面を更新
+            await tab.click(path='//button[@id="tab-description" and @data-key="chapters"]', by = tab.By.XPATH)
+
+            # Chapter Listが表示されることを確認
+            elements = await tab.find_elements(path='//div[@id="chapter-list"]/div/a', timeout=60)
+
+            self.html2 = etree.HTML(await tab.getDOM())
+
+        await tab.close()
+        return
 
     # URLが自身とマッチ判定
     def isMatchURL(url):
@@ -35,37 +60,38 @@ class rawkumaHTML(getHTML, HTMLinterface):
     # 漫画リストページURLリスト取得
     def getUpdateListUrl(limit):
         return [
-            f"https://rawkuma.com/manga/?page={page}&type=manga&order=update"
+            f"https://rawkuma.net/latest-update/?the_page={page}"
             for page in range(1, limit + 1)
         ]
 
     #
     def getImageList(self):
         # イメージリストを取得
-        # <img class="ts-main-image curdown" data-index="0" src="https://kumacdn.club/images/s/spy-x-family/chapter-62-3/1-6281c0b1e24d0.jpg"
-        #      data-server="Server1" onload="ts_reader_control.singleImageOnload();" onerror="ts_reader_control.imageOnError();">
-        # //*[@id="readerarea"]/img[1]
-        return self.html.xpath('//*[@id="readerarea"]//img/@src')
+        # /html/body/main/div[1]/div/div[4]/section/section/img
+        return self.html.xpath('//div[@class="relative"]/section/section/img/@src')
 
     # URLリストを取得
     def getURLlists(self):
+        if self.html2 is None:
+            # チャプター情報未取得の場合、空リストを返す
+            return []
+
         # チャプターリストを取得
-        # //*[@id="chapterlist"]/ul/li/div/div[1]/a
-        # //*[@id="chapterlist"]/ul/li/div/div[@class="eph-num"]/a
-        lists = self.html.xpath(
-            '//*[@id="chapterlist"]/ul/li/div/div[@class="eph-num"]'
+        # //*[@id="chapter-list"]/div
+        lists = self.html2.xpath(
+            '//*[@id="chapter-list"]/div'
         )
 
         vals = []
         for list in lists:
             href = list.xpath("./a/@href")
-            nums = list.xpath('./a/span[@class="chapternum"]/text()')
-            dates = list.xpath('./a/span[@class="chapterdate"]/text()')
+            nums = list.xpath('./a/div[1]/div[2]/div[1]/span/text()')
+            dates = list.xpath('./a/div[1]/div[2]/div[2]/time/@datetime')
             vals.append(
                 (
                     unquote(href[0]) if href else None,
                     nums[0] if nums else None,
-                    datetime.strptime(dates[0], "%B %d, %Y") if dates else None,
+                    datetime.strptime(dates[0], "%Y-%m-%dT%H:%M:%SZ").astimezone(ZoneInfo("Asia/Tokyo")) if dates else None,
                 )
             )
         return vals
@@ -73,86 +99,107 @@ class rawkumaHTML(getHTML, HTMLinterface):
     # TAGリストを取得
     def getTAGlist(self):
         # Genres:情報を取得
-        # //*[@id="post-920"]/div[2]/div[1]/div[2]/div[8]/span/a
-        # //*[@id="post-920"]/div[2]/div[1]/div[2]/div[@class="wd-full"]/span/a/text()
-        # //*[@id="post-5342"]/div[2]/div[1]/div[2]/div[7]/span/a[1]
-        # //*div[@id="content"]/div/div[@class="postbody"]/article/div[2]/div[1]/div[2]/div[@class="wd-full"]/span/a
+        # //*[@id="tabpanel-description"]/div/div/div[2]/div/a/span
         return self.html.xpath(
-            '//*[@class="infox"]/div[@class="wd-full"]/span[@class="mgen"]/a/text()'
+            '//*[@id="tabpanel-description"]/div/div/div[2]/div/a/span/text()'
         )
 
     # artistリストを取得
     def getARTIST(self):
         # Artist
-        lists = self.html.xpath(
-            '//div[@class="fmed" and b/text()="Artist"]/span/text()'
-        )
-        titles = str(lists[0]).split(",") if lists else []
-        return [val.strip() for val in titles]
+        return []
 
     # Titleを取得
     def getTitle(self):
         # Alternative Titles
+        # /html/body/main/article/section/div/div[2]/div[1]/div
         lists = self.html.xpath(
-            '//div[@class="wd-full" and b/text()="Alternative Titles"]/span/text()'
+            '//article/section/div/div//h1[contains(@itemprop,"name")]/../div/text()'
         )
         titles = str(lists[0]).split(",") if lists else []
         return [val.strip() for val in titles]
 
     def getDescription(self):
         # Synopsis Strategic Lovers
+        # //*[@id="tabpanel-description"]/div/div/div/div/p
         lists = self.html.xpath(
-            '//div[@class="wd-full"]/div[@itemprop="description"]/p/text()'
+            '//*[@id="tabpanel-description"]/div/div/div/div/p/text()'
         )
         return "\n".join([str(var).strip() for var in lists])
 
     # 登録時刻を取得
-    def getPostedOn(self):
+    def getPostedOn(self) -> datetime | None:
         # Posted On
-        lists = self.html.xpath('//time[@itemprop="datePublished"]/@datetime')
-        return (
-            datetime.strptime(
-                re.sub(r"^([0-9]+-[0-9]+-[0-9]+)[A-Z]+", r"\1T", lists[0]),
-                "%Y-%m-%dT%H:%M:%S%z",
-            ).astimezone(ZoneInfo("Asia/Tokyo"))
-            if lists
-            else None
-        )
+        return None
 
     # 更新時刻を取得
-    def getUpdatedOn(self):
+    def getUpdatedOn(self) -> datetime | None:
         # Updated On
-        lists = self.html.xpath('//time[@itemprop="dateModified"]/@datetime')
-        return (
-            datetime.strptime(
-                re.sub(r"^([0-9]+-[0-9]+-[0-9]+)[A-Z]+", r"\1T", lists[0]),
-                "%Y-%m-%dT%H:%M:%S%z",
-            ).astimezone(ZoneInfo("Asia/Tokyo"))
-            if lists
-            else None
-        )
+        # /html/body/main/article/section/div/div[1]/div[5]/div[8]/div/p
+        lists = self.html.xpath('//div[h1/span/text()="Last Updates"]/div[contains(@class, "inline")]/p[contains(@class, "inline")]/text()')
+        if lists:
+            return self._getTimeStamp("%Y-%m-%dT%H:%M:%S%z", lists[0].strip())
+        else:
+            return None
 
     def getThumbnail(self):
-        lists = self.html.xpath('//div[@class="thumbook"]/div[@class="thumb"]/img/@src')
+        # //main/article/section/div/div[1]/div[1]/img/@src
+        lists = self.html.xpath('//main/article/section/div/div/div[contains(@class, "contents")]/img/@src')
         return re.sub(r"^//", r"https://", lists[0]) if lists else None
 
-    def getURL2Chapter(self, url):
-        chapter = "0000.00"
-        list = re.search(
-            r"^https?://[^/]+/[^/]+-chapter-([0-9]+)-([0-9]+)[^0-9]*/$", url
-        )
+    def getURL2Chapter(self, url) -> List[str]:
+        chapter = "0000.000.000"
+        list = re.search(r"^https?://.*/chapter-([0-9]+)\.([0-9]+)\.([0-9]+)\.[0-9]*/$", url)
         if list:
-            chapter = "%04d.%02d" % (int(list.group(1)), int(list.group(2)))
+            chapter = "%04d.%03d.%03d" % (int(list.group(1)), int(list.group(2)), int(list.group(3)))
         else:
-            list = re.search(r"^https?://[^/]+/[^/]+-chapter-([0-9]+)/$", url)
+            # https://rawkuma.net/manga/kuse-tsuyo-kanojo-wa-toko-ni-izanau/chapter-15.3.217773/
+            list = re.search(r"^https?://.*/chapter-([0-9]+)\.([0-9]+)\.[0-9]*/$", url)
             if list:
-                chapter = "%04d.00" % int(list.group(1))
+                chapter = "%04d.%03d.000" % (int(list.group(1)), int(list.group(2)))
+            else:
+                # https://rawkuma.net/manga/tokidoki-bosotto-roshiago-de-dereru-tonari-no-alya-san/chapter-67.225248/
+                list = re.search(r"^https?://.*/chapter-([0-9]+)\.[0-9]*/$", url)
+                if list:
+                    chapter = "%04d.000.000" % int(list.group(1))
 
         return chapter
 
     # 検索ページからのURL取得
-    def getLatestPage(self):
-        # //*[@id="content"]/div/div[1]/div[1]/div[2]/div[4]/div[1]/div/a
+    def getLatestPage(self) -> str:
+        # //*[@id="search-results"]/div/div[1]/div[1]/a/@href
         return self.html.xpath(
-            '//div[@class="listupd"]/div[@class="bs"]/div[@class="bsx"]/a/@href'
+            '//div[@id="search-results"]/div/div/div[contains(@class, "overflow-hidden")]/a/@href'
         )
+
+    def _getTimeStamp(self, timefmt: str, timestamp: str) -> datetime | None:
+        # 「10 minutes ago」「2 hours ago」「1 days ago」「05-04-2023」
+
+        print(f"{timestamp=}")
+
+        if timestamp == "Just now":
+            return datetime.now(ZoneInfo("Asia/Tokyo")).replace(minute=0, second=0, microsecond=0)
+
+        date = None
+
+        s = re.search(r"(\d+) secs? ago", timestamp)
+        m = re.search(r"(\d+) minu?t?e?s? ago", timestamp)
+        h = re.search(r"(\d+) hours? ago", timestamp)
+        d = re.search(r"(\d+) days? ago", timestamp)
+        mo = re.search(r"(\d+) months? ago", timestamp)
+
+        if s is None and m is None and h is None and d is None and mo is None:
+            date = datetime.strptime(timestamp, timefmt).astimezone(ZoneInfo("Asia/Tokyo"))
+        else:
+            hours_ago = (
+                int(h.group(1))
+                if h is not None
+                else (int(d.group(1)) * 24 if d is not None
+                      else (int(mo.group(1)) * 24 * 30 if mo is not None else 0))
+            )
+            current_datetime = datetime.now(ZoneInfo("Asia/Tokyo")).replace(
+                minute=0, second=0, microsecond=0
+            )
+            date = current_datetime - timedelta(hours=hours_ago)
+
+        return date

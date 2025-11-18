@@ -1,3 +1,35 @@
+
+// localStorage からAPIトークンを取得
+function getToken() {
+    const t = localStorage.getItem("API_TOKEN");
+    if (!t) {
+        console.error("API_TOKEN is not set. Please visit token_setup.html first.");
+    }
+    return t;
+}
+
+// 認証付きfetchのラッパ
+async function apiFetch(path, options = {}) {
+    const token = getToken();
+    if (!token) {
+        // トークンが未設定なら401になる前に止める
+        throw new Error("No API token");
+    }
+
+    const headers = options.headers ? {...options.headers} : {};
+    headers["Authorization"] = "Bearer " + token;
+
+    // JSON投げるときは呼び出し側でContent-Typeつける。
+    // ここでは勝手に上書きしない。
+
+    const resp = await fetch(path, {
+        ...options,
+        headers,
+    });
+
+    return resp;
+}
+
 /* クエリパラメータを取得する関数 */
 function getQueryParam(name) {
     var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
@@ -39,56 +71,28 @@ function getDate() {
         ("00" + now.getSeconds()).slice(-2);            // 秒の取り出し
 }
 
-function saveChapterKey(book_key, chapter_key) {
+async function saveChapterKey(book_key, current_chapter_key) {
     /* 現在閲覧中のチャプターをキーに保存する。 */
-    var items = localStorage.getItem("CHAPTER_NUMBER");
-    if (items == null || items === "") {
-        items = {};
-    } else {
-        items = JSON.parse(items);
+    const body = {
+        chapter_key: current_chapter_key
+    };
+
+    const resp = await apiFetch(
+        `/mankitsu_api/v1/me/chapters/${encodeURIComponent(book_key)}`,
+        {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        }
+    );
+
+    if (!resp.ok) {
+        console.error("Failed to PUT chapter", resp.status);
+        return;
     }
 
-    var before_chapter = chapter_key;
-    if (book_key in items && "chapter" in items[book_key] && items[book_key]["chapter"] != null) {
-        let c = 1;
-        for (const item of items[book_key]["chapter"].split(' ')) {
-            if (before_chapter != item && c < 3) {
-                before_chapter += ' ' + item;
-            }
-            c++;
-        }
-        items[book_key]["chapter"] = before_chapter;
-    } else {
-        let minKey = null;
-        let minValue = 999999999;
-        let maxValue = 0;
-
-        for (let key in items) {
-            if (items[key].number < minValue) {
-                minValue = items[key].number;
-                minKey = key;
-            }
-            if (items[key].number > maxValue) {
-                maxValue = items[key].number;
-            }
-        }
-        if (Object.keys(items).length > 300) {
-            delete items[minKey];
-        }
-        items[book_key] = { "number": maxValue + 1, "chapter": before_chapter };
-    }
-
-    localStorage.setItem("CHAPTER_NUMBER", JSON.stringify(items));
-
-    /* マーカー情報の更新時間を更新  */
-    var marks = localStorage.getItem("CHAPTER_MARKER");
-    if (marks != null && marks != "") {
-        marks = JSON.parse(marks);
-        if (book_key in marks) {
-            marks[book_key]["update"] = getDate();
-            localStorage.setItem("CHAPTER_MARKER", JSON.stringify(marks));
-        }
-    }
+    // レスポンスは {status:"ok", number:..., chapter:"xxx yyy zzz"}
+    const data = await resp.json();
 }
 
 function updateProgressBar(progress) {

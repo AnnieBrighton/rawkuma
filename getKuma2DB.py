@@ -1,597 +1,729 @@
 #!/usr/bin/env python3
-#
-# https://rawkuma.com/manga/${URL} より以下の情報を取得
-#
-# - URL
-# - タイトル
-# - 著者
-# - チャプタ番号(nnnn.n)
-# -
-# - Posted On
-# - Updated On
+# -*- coding: utf-8 -*-
+
+"""
+RawKuma 収集 → DB 反映ツール（Enum版 DB ライブラリ対応）
+--------------------------------------------------------
+役割:
+- 指定 URL（https://rawkuma.com/manga/${URL}）から作品情報・チャプター・ページ情報を収集
+- 収集結果を SQLite（DB ライブラリ）に保存・更新
+- CLI からバッチ更新 / 新着確認 / 個別操作（ON/OFF/STOP/CLEAN/DELETE/UPDATE/TEST など）を提供
+
+設計メモ:
+- DB アクセスは先に提供した Enum 版ライブラリを使用（I/F は JST、DB 内部は UTC で保存）
+- select_* の規約:
+    * キーを列挙したカラムは SELECT 対象に含まれる
+    * 値が None 以外のキーは WHERE 条件（AND 結合）
+- 返ってくる行は「キー=Enum」の辞書（例: row[BookCol.KEY]）
+- HTML 側の取得結果の日時が文字列でも受け取れるよう、可能な限り JST datetime に正規化する
+"""
+
+from __future__ import annotations
 
 import asyncio
-import os
-from datetime import datetime, timedelta, timezone
+import functools
+import inspect
 import logging
+import os
 import re
 import sys
-from urllib.parse import unquote
-from Chrome import Chrome
 import unicodedata
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+from urllib.parse import unquote
 
-from DB import DB
-from analyzeHTML import getGooglBooks, analyzeHTML
+# ===== あなたの既存モジュール =====
+from Chrome import Chrome
+from analyzeHTML import analyzeHTML, getGooglBooks
 
+# ===== Enum版 DB ライブラリ =====
+from DB import DB, UseFlag, CommonCol, BookCol, ChapterCol
+
+# --------------------------------
+# ログ設定（ファイル + コンソール）
+# --------------------------------
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s %(threadName)s: %(message)s",
+    format="%(asctime)s %(levelname)s %(threadName)s: %(message)s",
     filename="rawkuma.log",
 )
 console = logging.StreamHandler()
-console.setFormatter(logging.Formatter("%(asctime)s %(threadName)s: %(message)s"))
+console.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(threadName)s: %(message)s"))
 logging.getLogger("").addHandler(console)
 
-#
+# --------------------------------
+# タイムゾーン（JST 固定）
+# --------------------------------
+JST = timezone(timedelta(hours=9), "JST")
 
 
 def func_hook(func):
-    def wrapper(*arg, **kwargs):
-        logging.info("call %s" % (func.__name__))
-        ret = func(*arg, **kwargs)
-        logging.info("return %s" % (func.__name__))
-        return ret
+    """関数呼び出しの前後にログを出すデコレータ。デバッグ容易化のための薄い仕組み。"""
+    if inspect.iscoroutinefunction(func):
+        @functools.wraps(func)
+        async def async_wrapper(*args, **kwargs):
+            logging.info("▶ call %s", func.__name__)
+            try:
+                ret = await func(*args, **kwargs)
+                return ret
+            finally:
+                logging.info("◀ return %s", func.__name__)
+        return async_wrapper
+    else:
+        @functools.wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            logging.info("▶ call %s", func.__name__)
+            try:
+                ret = func(*args, **kwargs)
+                return ret
+            finally:
+                logging.info("◀ return %s", func.__name__)
+        return sync_wrapper
 
+def func_hook(func):
+    """関数呼び出しの前後にログを出すデコレータ。デバッグ容易化のための薄い仕組み。"""
+    async def _awaitable(ret):
+        return await ret
+
+    def wrapper(*args, **kwargs):
+        logging.info("▶ call %s", func.__name__)
+        ret = func(*args, **kwargs)
+        # 非同期関数なら await 完了時点で return ログを出したい場面もあるが、
+        # ここでは簡易化のため呼び出し直後に return ログを出す。
+        logging.info("◀ return %s", func.__name__)
+        return ret
     return wrapper
 
 
-class getKuma2DB:
-    BASE_PATH = "Books"
-    ADDBOOK_DATE = "1900-01-01 00:00:00+09:00"
-    LIMITS = 15
+# =========================================================
+# 収集本体クラス
+# =========================================================
+class KumaFetcher:
+    """
+    RawKuma から情報を取得し、Enum 版 DB ライブラリに反映するクラス。
+    """
+
+    BASE_PATH = "Books"  # 画像などを保存する場合のベースディレクトリ（必要であれば使用）
+    LIMITS = 15          # 併行数（Chrome ページ取得の同時リクエスト数）
+
+    # 新規追加ブックの「強制更新起点」として使う古い日時（JST）
+    ADDBOOK_DATE_JST = datetime(1900, 1, 1, 9, 0, 0, tzinfo=JST)
 
     def __init__(self) -> None:
         self.db = DB(logging)
-        self.chrome = None
+        self.chrome: Optional[Chrome] = None
 
-    @func_hook
-    async def testbook(self, url, wait=300):
-        self.chrome = Chrome(logging)
+    # --------------- ユーティリティ ---------------
 
-        await self.chrome.start()
+    @staticmethod
+    def _normalize_to_jst_dt(v: Any) -> Optional[datetime]:
+        """
+        取得元の日時が文字列/naive/aware のいずれでも、できる限り JST の aware datetime に正規化する。
+        - すでに tz-aware なら JST へ変換
+        - naive なら JST を付与
+        - 文字列は代表的なフォーマットを試行（ISO8601 / "%Y-%m-%d %H:%M:%S%z"）
+        """
+        if v is None:
+            return None
+        if isinstance(v, datetime):
+            return v.astimezone(JST) if v.tzinfo else v.replace(tzinfo=JST)
+        if isinstance(v, str):
+            s = v.strip()
+            # ISO 風（Z を +00:00 に）
+            try:
+                if s.endswith("Z"):
+                    dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+                else:
+                    dt = datetime.fromisoformat(s)
+                return dt.astimezone(JST) if dt.tzinfo else dt.replace(tzinfo=JST)
+            except Exception:
+                pass
+            # 旧フォーマット "%Y-%m-%d %H:%M:%S%z"
+            try:
+                dt = datetime.strptime(s, "%Y-%m-%d %H:%M:%S%z")
+                return dt.astimezone(JST)
+            except Exception:
+                pass
+            # "YYYY-MM-DD" のみ → 0時で JST とみなす
+            if len(s) == 10 and re.fullmatch(r"\d{4}-\d{2}-\d{2}", s):
+                y, m, d = map(int, s.split("-"))
+                return datetime(y, m, d, 0, 0, 0, tzinfo=JST)
+        # パース不能は None 扱い（上流で無視/ログ）
+        return None
 
-        html = await self.analyzeHTML(url=url)
-        if html is None:
-            logging.info("情報が取得できませんでした。{url}".format(url=url))
-            return
-
-        images = html.getImageList()
-
-        urls = html.getURLlists()
-
-        tags = html.getTAGlist()
-        artists = html.getARTIST()
-        titles = html.getTitle()
-        post = html.getPostedOn()
-        update = html.getUpdatedOn()
-        thumb = html.getThumbnail()
-        description = html.getDescription()
-        latespages = html.getLatestPage()
-
-        logging.info("urls={urls}".format(urls=urls))
-        logging.info("tags={tags}".format(tags=tags))
-        logging.info("artists={artists}".format(artists=artists))
-        logging.info("titles={titles}".format(titles=titles))
-        logging.info("post={post}".format(post=post))
-        logging.info("update={update}".format(update=update))
-        logging.info("thumb={thumb}".format(thumb=thumb))
-        logging.info("description={description}".format(description=description))
-        logging.info("images={images}".format(images=images))
-        logging.info("latespages={latespages}".format(latespages=latespages))
-
-        books = getGooglBooks()
-        title, author = books.getTitle(titles)
-        logging.info("title={title}".format(title=title))
-        logging.info("author={author}".format(author=author))
-
-        logging.info("stop")
-        await asyncio.sleep(wait)
-
-        await self.chrome.stop()
-
-    @func_hook
-    def addbook(self, url, type) -> None:
-        # urlが最後/で終わる場合、/を取り除く
+    def _book_key_from_url(self, url: str) -> str:
+        """URL 末尾の余計なスラッシュを除去し、HTML 解析器から BOOK KEY を得る。"""
         url = re.sub(r"/$", "", url)
+        return analyzeHTML().getBookKey(url)
 
-        # チャプター情報取得
-        logging.info("get book info {URL}".format(URL=url))
+    async def _ensure_chrome(self):
+        """Chrome ドライバの起動（未起動時のみ）。"""
+        if self.chrome is None:
+            self.chrome = Chrome(logging)
+            await self.chrome.start()
 
-        book_key = self.get_book_key(url)
+    async def _shutdown_chrome(self):
+        """Chrome ドライバの停止（起動していれば）。"""
+        if self.chrome is not None:
+            try:
+                await self.chrome.stop()
+            finally:
+                self.chrome = None
 
-        result = self.db.select_book(**{DB.BOOK_KEY: book_key, DB.BOOK_TYPE: None})
-        logging.info(result)
+    async def _analyze_html(self, url: str):
+        """
+        指定 URL の HTML を解析してオブジェクトを返す。
+        - analyzeHTML(url, chrome).getHTML() を使い、内部でページ取得も行う。
+        """
+        await self._ensure_chrome()
+        html = analyzeHTML(url, self.chrome).getHTML()
+        await html.getTEXT4HTML(url)
+        return html
+
+    # --------------- 検証用（TEST） ---------------
+
+    @func_hook
+    async def testbook(self, url: str, wait: int = 300):
+        """
+        指定 URL をスクレイピングし、取得した情報をログに出すのみ（DB へは書かない）。
+        開発・検証用。
+        """
+        try:
+            await self._ensure_chrome()
+            html = await self._analyze_html(url)
+            if html is None:
+                logging.info("情報が取得できませんでした。url=%s", url)
+                return
+
+            images = html.getImageList()
+            urls = html.getURLlists()
+            tags = html.getTAGlist()
+            artists = html.getARTIST()
+            titles = html.getTitle()
+            post = self._normalize_to_jst_dt(html.getPostedOn())
+            update = self._normalize_to_jst_dt(html.getUpdatedOn())
+            thumb = html.getThumbnail()
+            description = html.getDescription()
+            latestpages = html.getLatestPage()
+
+            logging.info("urls=%s", urls)
+            logging.info("tags=%s", tags)
+            logging.info("artists=%s", artists)
+            logging.info("titles=%s", titles)
+            logging.info("post(JST)=%s", post)
+            logging.info("update(JST)=%s", update)
+            logging.info("thumb=%s", thumb)
+            logging.info("description=%s", description)
+            logging.info("images=%s", images)
+            logging.info("latestpages=%s", latestpages)
+
+            books = getGooglBooks()
+            title, author = books.getTitle(titles)
+            logging.info("title=%s", title)
+            logging.info("author=%s", author)
+
+            # 少し待ってから終了（手動確認のため）
+            logging.info("stop (sleep=%ss)", wait)
+            await asyncio.sleep(wait)
+        finally:
+            await self._shutdown_chrome()
+
+    # --------------- BOOK 追加 ---------------
+
+    @func_hook
+    def addbook(self, url: str, kind: str) -> None:
+        """
+        BOOK を新規登録（既存なら type を更新）。
+        - kind: テーブル種別（A〜Z の1文字想定）
+        """
+        # URL 正規化
+        url = re.sub(r"/$", "", url)
+        logging.info("get book info URL=%s", url)
+
+        book_key = self._book_key_from_url(url)
+
+        # 既存検索（BOOK_TYPE も列に含める）
+        result = self.db.select_book({BookCol.KEY: book_key, BookCol.TYPE: None})
+        logging.info("select_book -> %s", result)
 
         if len(result) == 0:
             if book_key == url:
-                # ダウンロードできるURLでないため終了
-                logging.error(
-                    "URL形式エラー:book_key={key}, url={url}".format(key=book_key, url=url)
-                )
+                # BOOK KEY が生成できず、URL そのものと同じ＝形式エラーと判断
+                logging.error("URL 形式エラー: book_key=%s, url=%s", book_key, url)
                 return
 
+            # 新規作成。KUMA_UPDATED を古い日時に設定して、後段更新対象に含める
             self.db.insert_book(
-                **{
-                    DB.BOOK_KEY: book_key,
-                    DB.URL: url,
-                    DB.BOOK_TYPE: type.upper(),
-                    DB.USE_FLAG: DB.USE_FLAG_UPDATE,
-                    DB.KUMA_UPDATED: self.ADDBOOK_DATE,
+                {
+                    BookCol.KEY: book_key,
+                    BookCol.URL: url,
+                    BookCol.TYPE: kind.upper(),
+                    CommonCol.USE_FLAG: UseFlag.UPDATE,
+                    BookCol.KUMA_UPDATED: self.ADDBOOK_DATE_JST,  # JST で渡す
                 }
             )
             self.db.commit()
+            logging.info("insert_book OK: key=%s", book_key)
         else:
-            if result[0][DB.BOOK_TYPE] != type.upper():
-                logging.info(
-                    "{URL} はすでに登録済み。TYPE {OLD} -> {NEW}".format(
-                        URL=url, OLD=result[0][DB.BOOK_TYPE], NEW=type.upper()
-                    )
-                )
-                self.db.update_book(
-                    result[0][DB.BOOK_ID], **{DB.BOOK_TYPE: type.upper()}
-                )
+            current_type = result[0].get(BookCol.TYPE)
+            if current_type != kind.upper():
+                logging.info("%s は既に登録済み。TYPE %s -> %s", url, current_type, kind.upper())
+                self.db.update_book(result[0][BookCol.ID], {BookCol.TYPE: kind.upper()})
                 self.db.commit()
-
             else:
-                logging.info("{URL} はすでに登録済み。".format(URL=url))
+                logging.info("%s は既に登録済み（TYPE 変更なし）。", url)
 
-    def close(self) -> None:
-        self.db.close()
+    # --------------- BOOK/CHAPTER/PAGE 更新の実体 ---------------
 
     @func_hook
-    async def analyzeHTML(self, url):
-        logging.info("get book info {URL}".format(URL=url))
-        html = analyzeHTML(url, self.chrome).getHTML()
+    async def updatedb2(self, row: Dict[Any, Any]):
+        """
+        1作品（BOOK）分の詳細を取得し、DB を更新する。
+        - 引数 row は select_book の返り値の1行（Enum キーの dict）
+        """
+        book_id = row[BookCol.ID]
+        book_key = row.get(BookCol.KEY, "UNKNOWN")
 
-        await html.getTEXT4HTML(url)
-
-        return html
-
-    # ダウンロード
-    @func_hook
-    async def updatedb2(self, val):
-        """ """
-        book_id = val[DB.BOOK_ID]
-        book_key = val[DB.BOOK_KEY]
-
-        # チャプター情報取得
-        html = await self.analyzeHTML(url=val[DB.URL])
+        # 作品ページ HTML 解析（作品全体の更新情報・チャプター一覧など）
+        html = await self._analyze_html(url=row[BookCol.URL])
         if html is None:
             return
 
-        urls = html.getURLlists()
-
+        url_tuples = html.getURLlists()    # [(chapter_url, chapter_num, chapter_date), ...]
         tags = html.getTAGlist()
         artists = html.getARTIST()
         titles = html.getTitle()
-        post = html.getPostedOn()
-        update = html.getUpdatedOn()
+        post = self._normalize_to_jst_dt(html.getPostedOn())
+        update = self._normalize_to_jst_dt(html.getUpdatedOn())
         thumb = html.getThumbnail()
         description = html.getDescription()
 
-        if update == val[DB.KUMA_UPDATED]:
-            # 取得更新日付とDB上の更新日付が同じ
-            logging.info("{BOOK}は更新が無い".format(BOOK=book_key))
+        # 取得更新日時と DB の更新日時が同じならスキップ
+        if update == row.get(BookCol.KUMA_UPDATED):
+            logging.info("%s は更新なし", book_key)
             return
 
-        logging.info("{BOOK}更新".format(BOOK=book_key))
+        logging.info("%s 更新あり → 反映開始", book_key)
 
-        data = {
-            DB.THUMB: thumb,
-            DB.KUMA_TITLE: ",".join(titles),
-            DB.KUMA_AUTHOR: ",".join(artists),
-            DB.KUMA_TAG: ",".join(tags),
-            DB.KUMA_DESCRIPTION: description,
-            DB.KUMA_POSTED: post,
-            DB.KUMA_UPDATED: update,
+        # BOOK メタの更新
+        update_data = {
+            BookCol.KUMA_THUMB: thumb,
+            BookCol.KUMA_TITLE: ",".join(titles),
+            BookCol.KUMA_AUTHOR: ",".join(artists),
+            BookCol.KUMA_TAG: ",".join(tags),
+            BookCol.KUMA_DESC: description,
+            BookCol.KUMA_POSTED: post,     # JST datetime を渡す
+            BookCol.KUMA_UPDATED: update,  # JST datetime を渡す
         }
 
-        if val[DB.TITLE] is None or val[DB.TITLE] == "":
+        # タイトル未設定なら Google Books API で補完（独自実装）
+        if not row.get(BookCol.TITLE):
             books = getGooglBooks()
-            title, author = books.getTitle(titles)
-            data[DB.TITLE] = (
-                unicodedata.normalize("NFC", title.strip())
-                if title is not None
-                else None
+            title, authors = books.getTitle(titles)
+            update_data[BookCol.TITLE] = (
+                unicodedata.normalize("NFC", title.strip()) if title else None
             )
-            data[DB.AUTHOR] = ",".join(author)
+            update_data[BookCol.AUTHOR] = ",".join(authors) if authors else None
 
-        self.db.update_book(book_id, **data)
+        self.db.update_book(book_id, update_data)
 
-        page_vals = []
-        for url in urls:
-            # ファイルを展開するパスを作成 (最後に / を含む)
-            # URLからチャプター番号を生成
-            chapter = html.getURL2Chapter(url[0])
-            if chapter is None:
+        # 以降、新規チャプターとページを追加
+        page_jobs: List[Dict[Any, Any]] = []
+        for u in url_tuples:
+            chapter_url, chapter_num, chapter_date_raw = u[0], u[1], u[2]
+            chapter_key = html.getURL2Chapter(chapter_url)
+            if chapter_key is None:
+                continue
+            if self.db.check_chapter(book_id, chapter_key):
+                # 既存チャプターはスキップ（ページ追加のみしたい場合はここで select して判定してもよい）
                 continue
 
-            if self.db.check_chapter(book_id, chapter):
-                # logging.info('すでに存在:{URL}'.format(URL=url[0]))
-                continue
+            chapter_date = self._normalize_to_jst_dt(chapter_date_raw)
 
-            # チャプターレコード作成
-            data = {
-                DB.BOOK_ID: book_id,
-                DB.CHAPTER_URL: url[0],
-                DB.CHAPTER_KEY: chapter,
-                DB.CHAPTER_NUM: url[1],
-                DB.CHAPTER_DATE: url[2],
-            }
-            chapter_id = self.db.insert_chapter(**data)
+            # CHAPTER レコード作成（upsert）
+            chapter_id = self.db.insert_chapter(
+                {
+                    ChapterCol.BOOK_ID: book_id,
+                    ChapterCol.URL: chapter_url,
+                    ChapterCol.KEY: chapter_key,
+                    ChapterCol.NUM: chapter_num,
+                    ChapterCol.DATE: chapter_date,  # JST datetime を渡す
+                }
+            )
 
-            page_vals.append({DB.CHAPTER_ID: chapter_id, DB.CHAPTER_URL: url[0]})
+            # 後続でページを取得・挿入するためのジョブ配列に登録
+            page_jobs.append({ChapterCol.ID: chapter_id, ChapterCol.URL: chapter_url})
 
-        @func_hook
-        async def getChapterHTML(val):
-            url = val[DB.CHAPTER_URL]
-            # ページ情報取得
-            html = await self.analyzeHTML(url=val[DB.CHAPTER_URL])
-            if html is None:
-                return
-
-            imgurls = html.getImageList()
-
-            # ページ登録情報作成
-            pagelists = []
-            for page, page_url in enumerate(imgurls):
-                pagelists.append((val[DB.CHAPTER_ID], page_url, page + 1))
-
-            # ページレコード作成
-            self.db.insert_page(pagelists)
-
+        # ページ情報の並列取得（過負荷回避のためセマフォで制限）
         sem = asyncio.Semaphore(self.LIMITS)
 
-        async def call(val):
+        async def fetch_and_insert_pages(job: Dict[Any, Any]):
+            """チャプターURLを開いて画像URL一覧を取得し、PAGE テーブルに一括挿入する。"""
+            chapter_url = job[ChapterCol.URL]
+            html2 = await self._analyze_html(url=chapter_url)
+            if html2 is None:
+                return
+            imgurls: List[str] = html2.getImageList()
+            await asyncio.sleep(3)
+
+            # DB.insert_page の I/F は [(chapter_id, page_url, page_num), ...]
+            pagelists = [(job[ChapterCol.ID], page_url, idx + 1) for idx, page_url in enumerate(imgurls)]
+            if pagelists:
+                self.db.insert_page(pagelists)
+
+        async def call(job: Dict[Any, Any]):
             async with sem:
-                return await getChapterHTML(val)
+                return await fetch_and_insert_pages(job)
 
-        await asyncio.gather(*[call(val) for val in page_vals])
+        # 並列実行
+        await asyncio.gather(*[call(j) for j in page_jobs])
 
+        # すべて完了後にコミット
         self.db.commit()
 
-        return
-
-    async def download(self, vals) -> None:
-        newvals = []
-
-        @func_hook
-        async def getHTML(val):
-            html = await self.analyzeHTML(url=val[DB.URL])
-            if html is None:
-                return
-
-            update = html.getUpdatedOn()
-            logging.info(f"更新日時 {val[DB.BOOK_KEY]} {update} {val[DB.KUMA_UPDATED]}")
-
-            # DBの更新日時とチャプターページの更新日時が異なるブックを更新対象に追加
-            if update != val[DB.KUMA_UPDATED]:
-                newvals.append(val)
-
-        sem = asyncio.Semaphore(self.LIMITS)
-
-        async def call(val):
-            async with sem:
-                return await getHTML(val)
-
-        await asyncio.gather(*[call(val) for val in vals])
-
-        for val in newvals:
-            logging.info(f"新規更新 {val[DB.BOOK_KEY]}")
-            await self.updatedb2(val)
+    # --------------- 更新バッチ（古いもの） ---------------
 
     @func_hook
     async def updatedb(self) -> None:
-        """DB更新"""
-        # DBの更新対象を、USEフラグがONで、かつ、更新日が7日より前のBOOK
-        before_week = datetime.now(timezone(timedelta(hours=9), "JST")) - timedelta(
-            days=7
-        )
-        vals = self.db.select_book(
-            **{
-                DB.URL: None,
-                DB.BOOK_KEY: None,
-                DB.KUMA_UPDATED: before_week.date().strftime("%Y-%m-%d"),
-                DB.TITLE: None,
-                DB.USE_FLAG: DB.USE_FLAG_UPDATE,
+        """
+        DB 更新バッチ:
+        - USE_FLAG=UPDATE で、KUMA_UPDATED が「1週間より前」の作品を更新対象に選ぶ
+        - サイトで更新確認 → 差分ある作品のみ詳細更新（CHAPTER/PAGE まで）
+        """
+        before_week = datetime.now(JST) - timedelta(days=7)
+
+        # 候補一覧の取得（SELECT 列は必要なものだけ列挙）
+        candidates = self.db.select_book(
+            {
+                BookCol.URL: None,
+                BookCol.KEY: None,
+                BookCol.KUMA_UPDATED: before_week.date().strftime("%Y-%m-%d"),
+                BookCol.TITLE: None,
+                CommonCol.USE_FLAG: UseFlag.UPDATE,
             }
         )
 
-        self.chrome = Chrome(logging)
-        await self.chrome.start()
+        try:
+            await self._ensure_chrome()
+            await self._download(candidates)  # 差分判定 → 差分のみ updatedb2
+            # 少し待って終了（Chrome 内部処理の掃除のため）
+            await asyncio.sleep(2)
+        finally:
+            await self._shutdown_chrome()
 
-        await self.download(vals)
+        logging.info("updatedb 完了")
+        os._exit(0)  # 既存挙動踏襲（不要なら削除可）
 
-        await asyncio.sleep(10)
+    # --------------- 新着系（更新リストから選別） ---------------
 
-        await self.chrome.stop()
-
-        logging.info("await await self.chrome.stop()")
-        os._exit(0)
-
-    async def updatenew(self, limit=1) -> None:
-        # DBの更新対象を、USEフラグがONのBOOK
+    async def updatenew(self, limit: int = 1) -> None:
+        """
+        新着（更新一覧ページから取得） + 既存 DB のうち USE_FLAG=UPDATE の作品を対象に差分更新する。
+        - limit: 更新一覧ページの参照ページ数
+        """
+        # USE_FLAG=UPDATE の BOOK 一覧
         dbvals = self.db.select_book(
-            **{
-                DB.URL: None,
-                DB.BOOK_KEY: None,
-                DB.KUMA_UPDATED: None,
-                DB.TITLE: None,
-                DB.USE_FLAG: DB.USE_FLAG_UPDATE,
+            {
+                BookCol.URL: None,
+                BookCol.KEY: None,
+                BookCol.KUMA_UPDATED: None,
+                BookCol.TITLE: None,
+                CommonCol.USE_FLAG: UseFlag.UPDATE,
             }
         )
-        vals = []
-        newvals = []
-        self.chrome = Chrome(logging)
-        await self.chrome.start()
+
+        # 更新候補キー（更新一覧ページを走査して抽出）
+        latest_keys: List[str] = []
 
         @func_hook
-        async def getHTML(url):
-            # 検索ページを取得
-            html = await self.analyzeHTML(url=url)
+        async def fetch_update_list(url: str):
+            html = await self._analyze_html(url=url)
+            # getLatestPage() が返す URL リストから book_key を抽出し、候補に追加
+            latest_urls = html.getLatestPage()
+            # logging.info(f"{latest_urls=}")
+            latest_keys.extend([self._book_key_from_url(u) for u in latest_urls])
+            await asyncio.sleep(3)
 
-            # 検索ページの情報を取り出し
-            update = html.getLatestPage()
+        try:
+            await self._ensure_chrome()
+            sem = asyncio.Semaphore(self.LIMITS)
 
-            vals.extend([self.get_book_key(url) for url in update])
+            async def call(url: str):
+                async with sem:
+                    return await fetch_update_list(url)
+
+            await asyncio.gather(*[call(url) for url in analyzeHTML().getUpdateListUrl(limit)])
+
+            # 強制更新基準（新規追加ブックは古い日時で登録されている）
+            newdate = self.ADDBOOK_DATE_JST
+
+            # DB 側リストから「更新候補キー」または「新規追加（古い基準日）」を抽出
+            targets = []
+            for row in dbvals:
+                if row[BookCol.KEY] in latest_keys or row.get(BookCol.KUMA_UPDATED) == newdate:
+                    targets.append(row)
+
+            await self._download(targets)
+            await asyncio.sleep(2)
+        finally:
+            await self._shutdown_chrome()
+
+        logging.info("updatenew 完了")
+        os._exit(0)
+
+    # --------------- 差分抽出 → 詳細更新 ---------------
+
+    async def _download(self, rows: Iterable[Dict[Any, Any]]) -> None:
+        """
+        一覧（作品群）に対し、サイト側の「更新日時」を見て差分がある作品のみ updatedb2 を実行。
+        """
+        # 差分対象
+        to_update: List[Dict[Any, Any]] = []
+
+        @func_hook
+        async def check_one(row: Dict[Any, Any]):
+            html = await self._analyze_html(url=row[BookCol.URL])
+            if html is None:
+                return
+            update_jst = self._normalize_to_jst_dt(html.getUpdatedOn())
+            logging.info("更新日時 check: %s site=%s db=%s", row[BookCol.KEY], update_jst, row.get(BookCol.KUMA_UPDATED))
+            if update_jst != row.get(BookCol.KUMA_UPDATED):
+                to_update.append(row)
 
         sem = asyncio.Semaphore(self.LIMITS)
 
-        async def call(url):
+        async def call(row: Dict[Any, Any]):
             async with sem:
-                return await getHTML(url)
+                return await check_one(row)
 
-        await asyncio.gather(
-            *[call(url) for url in analyzeHTML().getUpdateListUrl(limit)]
-        )
+        await asyncio.gather(*[call(r) for r in rows])
 
-        # 新規追加ブックの更新時刻
-        newdate = datetime.strptime(
-            self.ADDBOOK_DATE, "%Y-%m-%d %H:%M:%S%z"
-        ).astimezone(timezone(timedelta(hours=9)))
+        # 差分のみ詳細更新
+        for r in to_update:
+            logging.info("差分更新: %s", r[BookCol.KEY])
+            await self.updatedb2(r)
 
-        for val in dbvals:
-            # 更新検索画面、5画面分のブック、または、新規追加ブックを更新確認対象にする
-            if val[DB.BOOK_KEY] in vals or val[DB.KUMA_UPDATED] == newdate:
-                newvals.append(val)
+    # --------------- その他ユーティリティ ---------------
 
-        await self.download(newvals)
-
-        await asyncio.sleep(10)
-
-        await self.chrome.stop()
-
-        logging.info("await await self.chrome.stop()")
-        os._exit(0)
-
-    # URLからBOOK KEYを取得
-    def get_book_key(self, url) -> str:
-        return analyzeHTML().getBookKey(url)
-
-    # flag set
     @func_hook
-    def flagset(self, url, type) -> None:
-        """USEフラグ変更
-        Args:
-            url (_type_): BOOK URL
-            type (_type_): 変更後のUSEフラグ
+    def flagset(self, url: str, kind: str) -> None:
         """
-        book_key = self.get_book_key(url)
-        book_id = self.db.getBookID(book_key)
-
-        if type.upper() == "ON":
-            flag = DB.USE_FLAG_UPDATE
-        elif type.upper() == "OFF":
-            flag = DB.USE_FLAG_COMPLETED
-        elif type.upper() == "STOP":
-            flag = DB.USE_FLAG_STOPED
-        else:
+        USE_FLAG 変更（ON:UPDATE / OFF:COMPLETED / STOP:STOPPED）
+        """
+        book_key = self._book_key_from_url(url)
+        book_id = self.db.get_book_id(book_key)
+        if book_id is None:
+            logging.warning("book not found: %s", book_key)
             return
 
-        self.db.update_book(book_id, **{DB.USE_FLAG: flag})
+        if kind.upper() == "ON":
+            flag = UseFlag.UPDATE
+        elif kind.upper() == "OFF":
+            flag = UseFlag.COMPLETED
+        elif kind.upper() == "STOP":
+            flag = UseFlag.STOPPED
+        else:
+            logging.warning("unknown flag: %s", kind)
+            return
 
+        self.db.update_book(book_id, {CommonCol.USE_FLAG: flag})
         self.db.commit()
+        logging.info("flagset OK: %s -> %s", book_key, flag.name)
 
     @func_hook
-    def printinfo(self, url) -> None:
-        """情報出力
-        Args:
-            url (_type_): BOOK URL
+    def printinfo(self, url: str) -> None:
         """
-        book_key = self.get_book_key(url)
-
-        vals = self.db.select_book(
-            **{
-                DB.URL: None,
-                DB.BOOK_KEY: book_key,
-                DB.BOOK_TYPE: None,
-                DB.TITLE: None,
-                DB.USE_FLAG: None,
+        作品の基本情報を表示（簡易表示。必要に応じて拡張）
+        """
+        book_key = self._book_key_from_url(url)
+        rows = self.db.select_book(
+            {
+                BookCol.URL: None,
+                BookCol.KEY: book_key,
+                BookCol.TYPE: None,
+                BookCol.TITLE: None,
+                CommonCol.USE_FLAG: None,
             }
         )
-        for val in vals:
-            print(
-                f"{val[DB.BOOK_KEY]}={val[DB.BOOK_TYPE]} {val[DB.URL]} {val[DB.TITLE]}"
-            )
+        for r in rows:
+            print(f"{r[BookCol.KEY]}={r.get(BookCol.TYPE)} {r.get(BookCol.URL)} {r.get(BookCol.TITLE)}")
 
     @func_hook
-    def clean(self, url) -> None:
-        """チャプター、ページ情報削除
-        Args:
-            url (_type_): BOOK URL
+    def clean(self, url: str) -> None:
         """
-
-        # 指定URLがチャプターテーブルに存在するか確認
-        chapters = self.db.select_chapter(**{DB.CHAPTER_URL: url})
-
+        チャプター・ページ情報の削除。
+        - URL がチャプター URL の場合はそのチャプターを削除
+        - BOOK URL の場合は BOOK KEY を求め、該当作品の全チャプターを削除
+        """
+        # チャプター URL として存在するか確認
+        chapters = self.db.select_chapter({ChapterCol.URL: url})
         if len(chapters) == 0:
-            # チャプターテーブルになければ、ブック指定として処理
-            book_key = self.get_book_key(url)
-            vals = self.db.select_book(
-                **{DB.URL: None, DB.BOOK_ID: None, DB.BOOK_KEY: book_key}
-            )
-            for val in vals:
-                self.db.delete_chapter(**{DB.BOOK_ID: val[DB.BOOK_ID]})
+            # BOOK 単位で削除
+            book_key = self._book_key_from_url(url)
+            rows = self.db.select_book({BookCol.URL: None, BookCol.ID: None, BookCol.KEY: book_key})
+            for r in rows:
+                self.db.delete_chapter({ChapterCol.BOOK_ID: r[BookCol.ID]})
             self.db.commit()
+            logging.info("clean(BOOK) OK: %s", book_key)
         else:
-            self.db.delete_chapter(**{DB.CHAPTER_ID: chapters[0][DB.CHAPTER_ID]})
+            self.db.delete_chapter({ChapterCol.ID: chapters[0][ChapterCol.ID]})
             self.db.commit()
+            logging.info("clean(CHAPTER) OK: %s", url)
 
     @func_hook
-    def delete(self, url) -> None:
-        """BOOK削除
-        Args:
-            url (_type_): BOOK URL
+    def delete(self, url: str) -> None:
         """
-        book_key = self.get_book_key(url)
+        BOOK の削除（配下の CHAPTER/PAGE は CASCADE で自動削除）
+        """
+        book_key = self._book_key_from_url(url)
         self.db.delete_book(book_key)
         self.db.commit()
+        logging.info("delete BOOK OK: %s", book_key)
 
     @func_hook
-    async def update(self, url) -> None:
-        """BOOK情報更新
-        Args:
-            url (_type_): BOOK URL
+    async def update(self, url: str) -> None:
         """
-        book_key = self.get_book_key(url)
-        vals = self.db.select_book(
-            **{
-                DB.URL: None,
-                DB.BOOK_KEY: book_key,
-                DB.KUMA_UPDATED: None,
-                DB.TITLE: None,
-                DB.USE_FLAG: None,
+        指定 BOOK の強制更新（KUMA_UPDATED を古い日時に見せて差分更新させる）
+        """
+        book_key = self._book_key_from_url(url)
+        rows = self.db.select_book(
+            {
+                BookCol.URL: None,
+                BookCol.KEY: book_key,
+                BookCol.KUMA_UPDATED: None,
+                BookCol.TITLE: None,
+                CommonCol.USE_FLAG: None,
             }
         )
 
-        self.chrome = Chrome(logging)
-        await self.chrome.start()
+        try:
+            await self._ensure_chrome()
+            for r in rows:
+                logging.info("強制更新: %s (%s)", r[BookCol.KEY], r[BookCol.ID])
+                # 差分判定を必ずヒットさせるため、古い KUMA_UPDATED を渡して updatedb2 を実行
+                r[BookCol.KUMA_UPDATED] = self.ADDBOOK_DATE_JST
+                await self.updatedb2(r)
+            await asyncio.sleep(2)
+        finally:
+            await self._shutdown_chrome()
 
-        for val in vals:
-            logging.info(f"新規更新 {val[DB.BOOK_ID]} {val[DB.BOOK_KEY]}")
-            val[DB.KUMA_UPDATED] = self.ADDBOOK_DATE
-            await self.updatedb2(val)
-
-        await asyncio.sleep(10)
-        await self.chrome.stop()
-
-        logging.info("await await self.chrome.stop()")
+        logging.info("update 完了")
         os._exit(0)
 
     @func_hook
-    def update_title(self, url, title) -> None:
-        """TITLE情報更新
-        Args:
-            url (_type_): BOOK URL
+    def update_title(self, url: str, title: str) -> None:
         """
-        book_id = self.db.getBookID(self.get_book_key(url))
+        BOOK タイトルの手動更新（NFC 正規化）
+        """
+        book_id = self.db.get_book_id(self._book_key_from_url(url))
+        if book_id is None:
+            logging.warning("book not found")
+            return
 
         self.db.update_book(
-            book_id, **{DB.TITLE: unicodedata.normalize("NFC", title.strip())}
+            book_id, {BookCol.TITLE: unicodedata.normalize("NFC", title.strip())}
         )
-
         self.db.commit()
+        logging.info("title updated")
 
     @func_hook
-    def search(self, title) -> None:
-        """TITLE検索
-        Args:
-            title : 検索文字列
+    def update_thumb(self, url: str, thumb: str) -> None:
         """
-        vals = self.db.select_book(
-            **{
-                DB.URL: None,
-                DB.BOOK_KEY: None,
-                DB.KUMA_UPDATED: None,
-                DB.TITLE: "%{STR}%".format(
-                    STR=unicodedata.normalize("NFC", title.strip())
-                ),
+        BOOK タイトルの手動更新（NFC 正規化）
+        """
+        book_id = self.db.get_book_id(self._book_key_from_url(url))
+        if book_id is None:
+            logging.warning("book not found")
+            return
+
+        if thumb == "":
+            self.db.update_book(book_id, {BookCol.THUMB: None})
+        else:
+            self.db.update_book(book_id, {BookCol.THUMB: thumb.strip()})
+        self.db.commit()
+        logging.info("thumb updated")
+
+    @func_hook
+    def search(self, title: str) -> None:
+        """
+        タイトル LIKE 検索（キーワードは NFC 正規化）
+        """
+        pattern = "%{}%".format(unicodedata.normalize("NFC", title.strip()))
+        rows = self.db.select_book(
+            {
+                BookCol.URL: None,
+                BookCol.KEY: None,
+                BookCol.KUMA_UPDATED: None,
+                BookCol.TITLE: pattern,  # LIKE 検索（DB ライブラリが自動判定）
             }
         )
+        for r in rows:
+            print(f"{r[BookCol.KEY]}  {r.get(BookCol.TITLE)}")
 
-        for val in vals:
-            print("{KEY}  {TITLE}".format(KEY=val[DB.BOOK_KEY], TITLE=val[DB.TITLE]))
 
-
-#
-# メイン
-#
-
+# =========================================================
+# CLI エントリポイント
+# =========================================================
 
 @func_hook
 def main():
     if len(sys.argv) == 1:
-        # DB更新実行
-        kuma = getKuma2DB()
-        asyncio.run(kuma.updatedb())
-        kuma.close()
+        # DB 更新バッチ
+        app = KumaFetcher()
+        asyncio.run(app.updatedb())
+        app.db.close()
 
     elif len(sys.argv) == 2:
         cmd = sys.argv[1]
-        kuma = getKuma2DB()
+        app = KumaFetcher()
         if cmd.upper() == "NEW":
-            asyncio.run(kuma.updatenew())
-            logging.info('return kuma.updatenew()')
+            asyncio.run(app.updatenew())
         else:
-            kuma.printinfo(unquote(sys.argv[1]))
-        kuma.close()
-        logging.info('return kuma.close() in args 2')
+            app.printinfo(unquote(sys.argv[1]))
+        app.db.close()
 
     elif len(sys.argv) == 3:
         url = unquote(sys.argv[1])
-        type = sys.argv[2]
-        logging.info("URL={URL}, TYPE={TYPE}".format(URL=url, TYPE=type))
+        arg = sys.argv[2]
+        logging.info("URL=%s, ARG=%s", url, arg)
 
-        kuma = getKuma2DB()
+        app = KumaFetcher()
         if url.upper() == "NEW":
-            asyncio.run(kuma.updatenew(limit=int(type)))
-            logging.info('return kuma.updatenew(limit=int(type))')
-        elif type.upper() == "ON" or type.upper() == "OFF" or type.upper() == "STOP":
-            # USEフラグ変更
-            kuma.flagset(url, type)
-        elif len(type) == 1 and "A" <= type[0].upper() and type[0].upper() <= "Z":
-            # テーブル登録
-            kuma.addbook(url, type)
-        elif type.upper() == "CLEAN":
-            kuma.clean(url)
-        elif type.upper() == "DELETE":
-            kuma.delete(url)
-        elif type.upper() == "UPDATE":
-            asyncio.run(kuma.update(url))
-        elif type.upper() == "TEST":
-            asyncio.run(kuma.testbook(url))
+            asyncio.run(app.updatenew(limit=int(arg)))
+        elif arg.upper() in ("ON", "OFF", "STOP"):
+            app.flagset(url, arg)
+        elif len(arg) == 1 and "A" <= arg[0].upper() <= "Z":
+            app.addbook(url, arg)
+        elif arg.upper() == "CLEAN":
+            app.clean(url)
+        elif arg.upper() == "DELETE":
+            app.delete(url)
+        elif arg.upper() == "UPDATE":
+            asyncio.run(app.update(url))
+        elif arg.upper() == "TEST":
+            asyncio.run(app.testbook(url))
         elif url.upper() == "SEARCH":
-            kuma.search(type)
+            app.search(arg)
         else:
-            logging.info("{TYPE} error".format(TYPE=type))
-        kuma.close()
-        logging.info('return kuma.close()')
+            logging.info("不明な引数: %s", arg)
+        app.db.close()
 
     elif len(sys.argv) >= 4:
         url = unquote(sys.argv[1])
-        type = sys.argv[2]
+        arg = sys.argv[2]
         arg1 = sys.argv[3]
-        logging.info(
-            "URL={URL}, TYPE={TYPE}, ARG1={ARG1}".format(URL=url, TYPE=type, ARG1=arg1)
-        )
+        logging.info("URL=%s, ARG=%s, ARG1=%s", url, arg, arg1)
 
-        kuma = getKuma2DB()
-        if type.upper() == "TEST":
-            asyncio.run(kuma.testbook(url, int(arg1)))
-        elif type.upper() == "TITLE" and len(sys.argv) == 4:
-            kuma.update_title(url, arg1)
+        app = KumaFetcher()
+        if arg.upper() == "TEST":
+            asyncio.run(app.testbook(url, int(arg1)))
+        elif arg.upper() == "TITLE" and len(sys.argv) == 4:
+            app.update_title(url, arg1)
+        elif arg.upper() == "THUMB" and len(sys.argv) == 4:
+            app.update_thumb(url, arg1)
+        app.db.close()
 
 
 if __name__ == "__main__":
     main()
-    logging.info('return main()')
+    logging.info("return main()")

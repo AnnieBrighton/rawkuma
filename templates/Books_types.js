@@ -1,27 +1,34 @@
 
 
 /*  */
-function getBooksMarkInfo() {
-    let marks = localStorage.getItem("CHAPTER_MARKER");
-    if (marks != null && marks != "") {
-        marks = JSON.parse(marks);
-        if (Object.keys(marks).length > 0) {
-            return marks;
-        }
+async function getBooksMarkInfo() {
+    const token = localStorage.getItem("API_TOKEN");
+    if (!token) {
+        console.warn("No API_TOKEN in localStorage");
+        return null;
     }
-    return null;
+    const resp = await fetch("/mankitsu_api/v1/me/bookmarks", {
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    });
+    if (!resp.ok) {
+        console.error("Failed:", resp.status);
+        return null;
+    }
+    return await resp.json(); // { book_key: {...}, ... }
 }
 
 
 /* ブックマーク情報があれば、Menuにブックマークを表示 */
-function InsertBooksMarkMenu() {
+async function InsertBooksMarkMenu() {
     let menu = document.getElementById("BooksMark");
     if (menu != null) {
         /* すでにマークを表示済み */
         return;
     }
-    let marks = getBooksMarkInfo();
-    if (marks == null) {
+    let marks = await getBooksMarkInfo();
+    if (Object.keys(marks).length === 0) {
         return;
     }
     let row = document.getElementById("myRow");
@@ -29,8 +36,8 @@ function InsertBooksMarkMenu() {
 }
 
 
-function CreateBooksMarkPage() {
-    let marker_list = getBooksMarkInfo();
+async function CreateBooksMarkPage() {
+    let marker_list = await getBooksMarkInfo();
     if (marker_list == null) {
         return;
     }
@@ -59,7 +66,7 @@ function CreateBooksMarkPage() {
 }
 
 
-function MoveMenu(offset) {
+async function MoveMenu(offset) {
     /* "myRow"の配下の<a>タグをすべて取得 */
     var anchorElements = document.getElementById("myRow").getElementsByTagName("a");
 
@@ -81,21 +88,21 @@ function MoveMenu(offset) {
 }
 
 
-function viewLeftMenu() {
-    MoveMenu(-1);
+async function viewLeftMenu() {
+    await MoveMenu(-1);
 }
 
 
-function viewRightMenu() {
-    MoveMenu(1);
+async function viewRightMenu() {
+    await MoveMenu(1);
 }
 
 
 document.addEventListener('DOMContentLoaded', () => {
     /* 矢印キーの処理 */
-    window.addEventListener('keyup', (event) => {
-        if (event.key === 'ArrowRight') viewRightMenu();
-        if (event.key === 'ArrowLeft' || event.key === ' ') viewLeftMenu();
+    window.addEventListener('keyup', async (event) => {
+        if (event.key === 'ArrowRight') await viewRightMenu();
+        if (event.key === 'ArrowLeft' || event.key === ' ') await viewLeftMenu();
     });
 
     /* タッチスワイプ操作の処理 */
@@ -103,24 +110,24 @@ document.addEventListener('DOMContentLoaded', () => {
     var touchEndX = 0;
 
     /* タッチ開始 */
-    window.addEventListener('touchstart', (event) => {
+    window.addEventListener('touchstart', async (event) => {
         console.log('touchstart');
         touchStartX = event.changedTouches[0].screenX;
     });
 
     /*  */
-    window.addEventListener('touchend', (event) => {
+    window.addEventListener('touchend', async (event) => {
         console.log('touchend');
         touchEndX = event.changedTouches[0].screenX;
         if (Math.abs(touchEndX - touchStartX) > 100) {
             if (touchEndX > touchStartX) {
-                viewRightMenu();
+                await viewRightMenu();
             } else if (touchEndX < touchStartX) {
-                viewLeftMenu();
+                await viewLeftMenu();
             }
         }
     });
 
     /* ブックマーク */
-    InsertBooksMarkMenu();
+    (async () => { await InsertBooksMarkMenu(); })();
 });
