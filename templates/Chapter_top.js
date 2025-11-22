@@ -66,7 +66,7 @@ window.returnChapter = async function (url) {
     }
     /* デフォルトのaタグの動作を停止する */
     return false;
-}
+};
 
 function getDate() {
     var now = new Date();
@@ -121,7 +121,7 @@ window.handleClick = async function(book_key, title, thumb) {
             console.error("Failed to DELETE bookmark", resp.status);
         }
     }
-}
+};
 
 /* ローカルストレージからキー=book_keyで情報を取得 */
 async function loadChapterKey(book_key) {
