@@ -276,7 +276,7 @@ class KumaFetcher:
     # --------------- BOOK/CHAPTER/PAGE 更新の実体 ---------------
 
     @func_hook
-    async def updatedb2(self, row: Dict[Any, Any]):
+    async def updatedb2(self, row: Dict[Any, Any], ext_chapter: List[Dict[Any, Any]] = None):
         """
         1作品（BOOK）分の詳細を取得し、DB を更新する。
         - 引数 row は select_book の返り値の1行（Enum キーの dict）
@@ -290,6 +290,21 @@ class KumaFetcher:
             return
 
         url_tuples = html.getURLlists()    # [(chapter_url, chapter_num, chapter_date), ...]
+
+        if ext_chapter is not None:
+            # logging.info(f"{ext_chapter=}")
+            # logging.info(f"{url_tuples=}")
+
+            # すでに存在するURLをセットにしておく
+            existing_urls = {u[0] for u in url_tuples}
+
+            # ext_chapter から、まだ無いURLだけを url_tuples に追加
+            for ch in ext_chapter:
+                if ch["url"] not in existing_urls:
+                    url_tuples.append((ch["url"], ch["num"], ch["date"]))
+
+            # logging.info(f"{url_tuples=}")
+
         tags = html.getTAGlist()
         artists = html.getARTIST()
         titles = html.getTitle()
@@ -300,10 +315,10 @@ class KumaFetcher:
 
         # 取得更新日時と DB の更新日時が同じならスキップ
         if update == row.get(BookCol.KUMA_UPDATED):
-            logging.info("%s は更新なし", book_key)
+            logging.info(f"{book_key} は更新なし {update=}")
             return
 
-        logging.info("%s 更新あり → 反映開始", book_key)
+        logging.info(f"{book_key} 更新あり → 反映開始 {update=}, {row.get(BookCol.KUMA_UPDATED)=}")
 
         # BOOK メタの更新
         update_data = {
@@ -434,14 +449,17 @@ class KumaFetcher:
 
         # 更新候補キー（更新一覧ページを走査して抽出）
         latest_keys: List[str] = []
+        chapter_info = {}
 
         @func_hook
         async def fetch_update_list(url: str):
             html = await self._analyze_html(url=url)
             # getLatestPage() が返す URL リストから book_key を抽出し、候補に追加
             latest_urls = html.getLatestPage()
-            # logging.info(f"{latest_urls=}")
-            latest_keys.extend([self._book_key_from_url(u) for u in latest_urls])
+            latest_keys.extend([self._book_key_from_url(u['url']) for u in latest_urls])
+            for u in latest_urls:
+                chapter_info[self._book_key_from_url(u['url'])] = u['chapter'] 
+
             await asyncio.sleep(3)
 
         try:
@@ -463,7 +481,7 @@ class KumaFetcher:
                 if row[BookCol.KEY] in latest_keys or row.get(BookCol.KUMA_UPDATED) == newdate:
                     targets.append(row)
 
-            await self._download(targets)
+            await self._download(targets, chapter_info)
             await asyncio.sleep(2)
         finally:
             await self._shutdown_chrome()
@@ -473,7 +491,7 @@ class KumaFetcher:
 
     # --------------- 差分抽出 → 詳細更新 ---------------
 
-    async def _download(self, rows: Iterable[Dict[Any, Any]]) -> None:
+    async def _download(self, rows: Iterable[Dict[Any, Any]], chapter_info: Dict[str, List]) -> None:
         """
         一覧（作品群）に対し、サイト側の「更新日時」を見て差分がある作品のみ updatedb2 を実行。
         """
@@ -501,7 +519,7 @@ class KumaFetcher:
         # 差分のみ詳細更新
         for r in to_update:
             logging.info("差分更新: %s", r[BookCol.KEY])
-            await self.updatedb2(r)
+            await self.updatedb2(r, chapter_info[r[BookCol.KEY]] if r[BookCol.KEY] in chapter_info else None)
 
     # --------------- その他ユーティリティ ---------------
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import asyncio
 import re
 from urllib.parse import unquote
 from booksHTML import HTMLinterface, getHTML
@@ -7,7 +8,7 @@ from zoneinfo import ZoneInfo
 from Chrome import ChromeTab
 from lxml import etree
 from datetime import datetime, timedelta
-from typing import List
+from typing import Dict, List
 
 class rawkumaHTML(getHTML, HTMLinterface):
     def __init__(self, chrome) -> None:
@@ -17,10 +18,12 @@ class rawkumaHTML(getHTML, HTMLinterface):
     async def getTEXT4HTML(self, url) -> None:
         tab = ChromeTab(self.chrome)
         await tab.open()
-        await tab.get(url)
+        await tab.get(url, timeout=120000)
 
         self.html = etree.HTML(await tab.getDOM())
         self.html2 = None
+
+        await asyncio.sleep(2)
 
         # Synopsis, Chapters, Reviews, GalleryのTabが存在するか確認するために、Chaptersの存在を確認
         elements = await tab.find_elements(path='//button[@id="tab-description" and @data-key="chapters"]')
@@ -29,7 +32,7 @@ class rawkumaHTML(getHTML, HTMLinterface):
             await tab.click(path='//button[@id="tab-description" and @data-key="chapters"]', by = tab.By.XPATH)
 
             # Chapter Listが表示されることを確認
-            elements = await tab.find_elements(path='//div[@id="chapter-list"]/div/a', timeout=60)
+            elements = await tab.find_elements(path='//div[@id="chapter-list"]/div/a', timeout=180)
 
             self.html2 = etree.HTML(await tab.getDOM())
 
@@ -166,19 +169,32 @@ class rawkumaHTML(getHTML, HTMLinterface):
         return chapter
 
     # 検索ページからのURL取得
-    def getLatestPage(self) -> str:
+    def getLatestPage(self) -> List[Dict[str, List]]:
         # //*[@id="search-results"]/div/div[1]/div[1]/a/@href
-        return self.html.xpath(
-            '//div[@id="search-results"]/div/div/div[contains(@class, "overflow-hidden")]/a/@href'
-        )
+        search_lists = self.html.xpath('//div[@id="search-results"]/div/div')
+        
+        results = []
+        for list in search_lists:
+            if list.xpath('./div[contains(@class, "overflow-hidden")]/a/@href'):
+                a = {}
+                a['url'] = list.xpath('./div[contains(@class, "overflow-hidden")]/a/@href')[0]
+
+                a['chapter'] = []
+                for chap in list.xpath('./a'):
+                    if chap.xpath('./@href'):
+                        a['chapter'].append({'url': chap.xpath('./@href')[0],
+                                             'num': chap.xpath('./div/p/text()')[0].strip(),
+                                             'date': datetime.strptime(chap.xpath('./div/time/@datetime')[0], "%Y-%m-%dT%H:%M:%S%z").astimezone(ZoneInfo("Asia/Tokyo"))})
+
+                results.append(a)
+
+        return results
 
     def _getTimeStamp(self, timefmt: str, timestamp: str) -> datetime | None:
         # 「10 minutes ago」「2 hours ago」「1 days ago」「05-04-2023」
 
-        print(f"{timestamp=}")
-
         if timestamp == "Just now":
-            return datetime.now(ZoneInfo("Asia/Tokyo")).replace(minute=0, second=0, microsecond=0)
+            return datetime.now(ZoneInfo("Asia/Tokyo")).replace(hour=0,minute=0, second=0, microsecond=0)
 
         date = None
 
@@ -191,15 +207,11 @@ class rawkumaHTML(getHTML, HTMLinterface):
         if s is None and m is None and h is None and d is None and mo is None:
             date = datetime.strptime(timestamp, timefmt).astimezone(ZoneInfo("Asia/Tokyo"))
         else:
-            hours_ago = (
-                int(h.group(1))
-                if h is not None
-                else (int(d.group(1)) * 24 if d is not None
-                      else (int(mo.group(1)) * 24 * 30 if mo is not None else 0))
+            date = datetime.now(ZoneInfo("Asia/Tokyo")) - timedelta(
+                seconds=int(s.group(1)) if s is not None else 0,
+                minutes=int(m.group(1)) if m is not None else 0,
+                hours=int(h.group(1)) if h is not None else 0,
+                days=int(d.group(1)) if d is not None else int(mo.group(1)) * 30 if mo is not None else 0,
             )
-            current_datetime = datetime.now(ZoneInfo("Asia/Tokyo")).replace(
-                minute=0, second=0, microsecond=0
-            )
-            date = current_datetime - timedelta(hours=hours_ago)
 
-        return date
+        return date.replace(hour=0, minute=0, second=0, microsecond=0)
