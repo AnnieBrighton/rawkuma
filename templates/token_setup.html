@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>APIトークン設定</title>
+<style>
+body {
+    font-family: system-ui, sans-serif;
+    max-width: 480px;
+    margin: 2rem auto;
+    line-height: 1.5;
+}
+label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: .25rem;
+}
+input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: .5rem;
+    font-family: monospace;
+}
+button {
+    margin-top: .75rem;
+    padding: .5rem .75rem;
+    cursor: pointer;
+}
+#status {
+    margin-top: 1rem;
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+    background: #f4f4f4;
+    border-radius: .5rem;
+    padding: .75rem;
+    min-height: 4em;
+}
+</style>
+</head>
+<body>
+
+<h1>APIトークン設定</h1>
+
+<p>管理者から渡されたトークンをここで登録します。登録後はこのドメイン配下のページからAPIを叩くときに、localStorageのトークンを使ってAuthorizationヘッダを付与してください。</p>
+
+<div>
+    <label for="tokenInput">トークン</label>
+    <input type="text" id="tokenInput" placeholder="p3HE7iK8......(長い文字列)">
+
+    <button id="saveBtn">トークンを保存する</button>
+    <button id="loadBtn">保存済みトークンを表示</button>
+    <button id="testBtn">APIテスト(GET /mankitsu_api/v1/me/bookmarks)</button>
+
+    <div id="status"></div>
+</div>
+
+<script>
+const TOKEN_KEY = "API_TOKEN";
+
+function saveToken() {
+    const token = document.getElementById("tokenInput").value.trim();
+    if (!token) {
+        setStatus("トークンが空です。");
+        return;
+    }
+    localStorage.setItem(TOKEN_KEY, token);
+    setStatus("保存しました。");
+}
+
+function loadToken() {
+    const t = localStorage.getItem(TOKEN_KEY);
+    if (!t) {
+        setStatus("localStorageにトークンはありません。");
+    } else {
+        // 画面にはそのまま出してしまうが、ここは管理者向け画面なのでOKという前提
+        // 一般ユーザ向けUIならマスク表示を推奨
+        setStatus("保存済みトークン:\n" + t);
+    }
+}
+
+async function testApi() {
+    const t = localStorage.getItem(TOKEN_KEY);
+    if (!t) {
+        setStatus("トークンが保存されていません。");
+        return;
+    }
+
+    try {
+        const resp = await fetch("/mankitsu_api/v1/me/bookmarks", {
+            method: "GET",
+            headers: {
+                "Authorization": "Bearer " + t
+            }
+        });
+
+        const txt = await resp.text(); // まずtextで取っておく
+        let msg = "HTTP " + resp.status + "\n";
+
+        // JSONとしてparseを試みる
+        try {
+            const js = JSON.parse(txt);
+            msg += JSON.stringify(js, null, 2);
+        } catch(e) {
+            msg += txt;
+        }
+
+        setStatus(msg);
+
+    } catch (err) {
+        setStatus("fetchエラー:\n" + err);
+    }
+}
+
+function setStatus(message) {
+    const st = document.getElementById("status");
+    st.textContent = message;
+}
+
+// イベント関連付け
+document.getElementById("saveBtn").addEventListener("click", saveToken);
+document.getElementById("loadBtn").addEventListener("click", loadToken);
+document.getElementById("testBtn").addEventListener("click", testApi);
+</script>
+
+</body>
+</html>
