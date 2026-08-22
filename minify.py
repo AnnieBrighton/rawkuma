@@ -23,25 +23,26 @@ async def minify(dest, current_dir, file):
     src_path = os.path.join(current_dir, file)
     dst_path = os.path.join(dest, current_dir, file)
 
-    async with aiofiles.open(src_path, mode="r", encoding="utf_8") as f:
-        s0 = await f.readlines()
+    if extention in ["html", "css", "js" ]:
+        async with aiofiles.open(src_path, mode="r", encoding="utf_8") as f:
+            s0 = await f.readlines()
 
-    if extention == "html":
-        s1 = "".join([s.strip() for s in s0])  # 各行の前後の空白を削除
-        s2 = re.sub(r"/\*.*?\*/", "", s1)  # コメントの削除
-        s0 = re.sub(r"<!--.*?-->", "", s2)  # コメントの削除
-    elif extention == "css":
-        s1 = "".join([s.strip() for s in s0])  # 各行の前後の空白を削除
-        s2 = re.sub(r"/\*.*?\*/", "", s1)  # コメントの削除
-        s3 = re.sub(r": +?", ":", s2)  # セミコロン後の空白を削除
-        s0 = re.sub(r" +?{", "{", s3)  # '{'前の空白を削除
-    elif extention == "js":
-        s1 = [s.split("//")[0] for s in s0]  # 1行コメント(//以降)を削除
-        s2 = "".join([s.strip() for s in s1])  # 各行の前後の空白を削除
-        s0 = re.sub(r"/\*.*?\*/", "", s2)  # コメント(/* */)の削除
+        if extention == "html":
+            s1 = "".join([s.strip() for s in s0])  # 各行の前後の空白を削除
+            s2 = re.sub(r"/\*.*?\*/", "", s1)  # コメントの削除
+            s0 = re.sub(r"<!--.*?-->", "", s2)  # コメントの削除
+        elif extention == "css":
+            s1 = "".join([s.strip() for s in s0])  # 各行の前後の空白を削除
+            s2 = re.sub(r"/\*.*?\*/", "", s1)  # コメントの削除
+            s3 = re.sub(r": +?", ":", s2)  # セミコロン後の空白を削除
+            s0 = re.sub(r" +?{", "{", s3)  # '{'前の空白を削除
+        elif extention == "js":
+            s1 = [s.split("//")[0] for s in s0]  # 1行コメント(//以降)を削除
+            s2 = "".join([s.strip() for s in s1])  # 各行の前後の空白を削除
+            s0 = re.sub(r"/\*.*?\*/", "", s2)  # コメント(/* */)の削除
 
-    async with aiofiles.open(dst_path, mode="w", encoding="utf_8") as f:
-        await f.write(s0)
+        async with aiofiles.open(dst_path, mode="w", encoding="utf_8") as f:
+            await f.write(s0)
 
 
 async def main(src, dest, limit):
