@@ -32,9 +32,11 @@ class rawkumaHTML(getHTML, HTMLinterface):
             await tab.click(path='//button[@id="tab-description" and @data-key="chapters"]', by = tab.By.XPATH)
 
             # Chapter Listが表示されることを確認
-            elements = await tab.find_elements(path='//div[@id="chapter-list"]/div/a', timeout=180)
-
-            self.html2 = etree.HTML(await tab.getDOM())
+            try:
+                await tab.find_elements(path='//div[@id="chapter-list"]/div/a', timeout=180)
+                self.html2 = etree.HTML(await tab.getDOM())
+            except Exception:
+                pass
 
         await tab.close()
         return
@@ -214,4 +216,4 @@ class rawkumaHTML(getHTML, HTMLinterface):
                 days=int(d.group(1)) if d is not None else int(mo.group(1)) * 30 if mo is not None else 0,
             )
 
-        return date.replace(hour=0, minute=0, second=0, microsecond=0)
+        return date.replace(minute=0, second=0, microsecond=0)
