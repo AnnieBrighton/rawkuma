@@ -104,7 +104,8 @@ class KumaFetcher:
     """
 
     BASE_PATH = "Books"  # 画像などを保存する場合のベースディレクトリ（必要であれば使用）
-    LIMITS = 15          # 併行数（Chrome ページ取得の同時リクエスト数）
+    LIMITS = 1           # 併行数（Chrome ページ取得の同時リクエスト数）
+    PAGE_GET_LIMITS = 1  # 併行数（Chrome ページ取得の同時リクエスト数）
 
     # 新規追加ブックの「強制更新起点」として使う古い日時（JST）
     ADDBOOK_DATE_JST = datetime(1900, 1, 1, 9, 0, 0, tzinfo=JST)
@@ -370,7 +371,7 @@ class KumaFetcher:
             page_jobs.append({ChapterCol.ID: chapter_id, ChapterCol.URL: chapter_url})
 
         # ページ情報の並列取得（過負荷回避のためセマフォで制限）
-        sem = asyncio.Semaphore(self.LIMITS)
+        sem = asyncio.Semaphore(self.PAGE_GET_LIMITS)
 
         async def fetch_and_insert_pages(job: Dict[Any, Any]):
             """チャプターURLを開いて画像URL一覧を取得し、PAGE テーブルに一括挿入する。"""
@@ -464,7 +465,7 @@ class KumaFetcher:
 
         try:
             await self._ensure_chrome()
-            sem = asyncio.Semaphore(self.LIMITS)
+            sem = asyncio.Semaphore(self.PAGE_GET_LIMITS)
 
             async def call(url: str):
                 async with sem:
