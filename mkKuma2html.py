@@ -48,7 +48,7 @@ class MkKuma2Html:
         self.output_book(types)
 
         for type in types:
-            books = self.db.select_book(
+            books = self.db.select_book2(
                 {
                     BookCol.KEY: None,
                     BookCol.TITLE: None,

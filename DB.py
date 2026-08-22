@@ -420,6 +420,54 @@ class DB:
             out.append(d)
         return out
 
+    def select_book2(self, kw: Dict[BookCol | CommonCol, Any]) -> List[Dict[Enum, Any]]:
+        sql = f"""
+            SELECT
+                b.{BookCol.ID.value} as {BookCol.ID.value},
+                b.{BookCol.KEY.value} as {BookCol.KEY.value},
+                b.{BookCol.TITLE.value} as {BookCol.TITLE.value},
+                b.{BookCol.THUMB.value} as {BookCol.THUMB.value},
+                b.{BookCol.TYPE.value} as {BookCol.TYPE.value},
+                b.{BookCol.SINGLE.value} as {BookCol.SINGLE.value},
+                b.{BookCol.KUMA_TITLE.value} as {BookCol.KUMA_TITLE.value},
+                b.{BookCol.KUMA_THUMB.value} as {BookCol.KUMA_THUMB.value},
+                b.{CommonCol.USE_FLAG.value} as {CommonCol.USE_FLAG.value}
+            FROM {Table.BOOK.value} AS b
+            LEFT JOIN (
+                SELECT
+                    {ChapterCol.BOOK_ID.value},
+                    MAX(chapter_date) AS max_chapter_date
+                FROM {Table.CHAPTER.value}
+                GROUP BY {ChapterCol.BOOK_ID.value}
+            ) AS c
+                ON c.{ChapterCol.BOOK_ID.value} = b.{BookCol.ID.value}
+            WHERE
+                b.{BookCol.TYPE.value} = ? AND
+                b.{CommonCol.USE_FLAG.value} <> {UseFlag.NO_USED.value}
+            ORDER BY
+                CASE
+                    WHEN b.{BookCol.KUMA_UPDATED.value} IS NULL THEN c.max_chapter_date
+                    WHEN c.max_chapter_date IS NULL THEN b.{BookCol.KUMA_UPDATED.value}
+                    WHEN b.{BookCol.KUMA_UPDATED.value} >= c.max_chapter_date THEN b.{BookCol.KUMA_UPDATED.value}
+                    ELSE c.max_chapter_date
+                END DESC
+        """
+
+        select_cols: List[Enum] = [BookCol.ID] + [c for c in list(BookCol) + list(CommonCol) if c in kw]
+
+        cur = self.conn.execute(sql, tuple(kw[BookCol.TYPE]))
+        rows = cur.fetchall()
+
+        out: List[Dict[Enum, Any]] = []
+        for r in rows:
+            d: Dict[Enum, Any] = {}
+            for c in select_cols:
+                raw = r[c.value]
+                d[c] = self._normalize_incoming(c, raw)
+            out.append(d)
+        return out
+
+
     def get_book_id(self, book_key: str) -> Optional[int]:
         cur = self.conn.execute(
             f"SELECT {BookCol.ID.value} FROM {Table.BOOK.value} WHERE {BookCol.KEY.value} = ?",
